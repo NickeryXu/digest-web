@@ -58,6 +58,7 @@ def role_list():
 @user.route('/user/login', methods=['POST'])
 def login():
     from app import db
+    from datetime import datetime
     returnObj = {}
     try:
         username = request.json.get('username')
@@ -84,6 +85,8 @@ def login():
                         'advanced_menu': [single]
                     }
                     role.append(menu)
+            LoginTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            db.mg_user.update({'_id': data_check['_id']}, {'$set': {'RecentLogin': LoginTime}})
             returnObj['data'] = {'username': username, 'role': role}
             returnObj['info'] = {'status': '200', 'result': '登录成功'}
         else:

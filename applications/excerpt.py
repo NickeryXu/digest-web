@@ -19,24 +19,29 @@ def excerpt_search():
         is_hot_exp = request.json.get('is_hot_exp')
         shelf_status = request.json.get('shelf_status')
         check_status = request.json.get('check_status')
+        # 查询均采用模糊查询
         if book_name:
-            data_search['book_name'] = book_name
+            data_search['book_name'] = {'$regex': book_name}
         if exp_text:
-            data_search['exp_text'] = exp_text
+            data_search['exp_text'] = {'$regex': exp_text}
         if exp_chp_id:
-            data_search['exp_chp_id'] = exp_chp_id
+            data_search['exp_chp_id'] = {'$regex': exp_chp_id}
         if exp_chp_title:
-            data_search['exp_chp_title'] = exp_chp_title
+            data_search['exp_chp_title'] = {'$regex': exp_chp_title}
         if is_hot_exp:
-            data_search['is_hot_exp'] = is_hot_exp
-        if shelf_status:
+            data_search['is_hot_exp'] = {'$regex': is_hot_exp}
+        if shelf_status == '1':
             data_search['shelf_status'] = shelf_status
-        if check_status:
+        elif shelf_status == '0':
+            data_search['shelf_status'] = {'$or': [{'shelf_status': '0'}, {'shelf_status': {'$exists': 0}}]}
+        if check_status == '1':
             data_search['check_status'] = check_status
-        if not data_search:
-            data = db.t_excerpts.find()
-        else:
-            data = db.t_excerpts.find({data_search})
+        elif check_status == '0':
+            data_search['check_status'] = {'$or': [{'check_status': '0'}, {'check_status': {'$exists': 0}}]}
+        start = int(request.args.get('start', '0'))
+        end = int(request.args.get('end', '15'))
+        length = end - start
+        data = db.t_excerpts.find(data_search).limit(length).skip(start)
         dataObj = []
         # 查询出的文档可能没有ck字段，即没有修改内容，所以采用get方法，修改内容取原始内容
         for digest in data:
@@ -112,7 +117,7 @@ def excerpt_insert():
         returnObj['info'] = {'status': '200', 'result': '录入成功'}
     except Exception as e:
         print('excerpt_insert error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
+        returnObj['info'] = {'status': '500', 'result': '后台异常 '}
     finally:
         return jsonify(returnObj)
 

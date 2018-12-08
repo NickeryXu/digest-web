@@ -21,51 +21,59 @@ def book_search():
         publish_info = request.json.get('publish_info')
         shelf_status = request.json.get('shelf_status')
         check_status = request.json.get('check_status')
-        publish_date = publish_info.get('publish_date')
-        ISBN = publish_info.get('ISBN')
-        binding = publish_info.get('binding')
-        price = publish_info.get('price')
-        pages = publish_info.get('pages')
-        words = publish_info.get('words')
-        publisher = publish_info.get('publisher')
         data_search = {}
+        if publish_info:
+            publish_date = publish_info.get('publish_date')
+            ISBN = publish_info.get('ISBN')
+            binding = publish_info.get('binding')
+            price = publish_info.get('price')
+            pages = publish_info.get('pages')
+            words = publish_info.get('words')
+            publisher = publish_info.get('publisher')
+            if publish_date:
+                data_search['publish_info.publish_date'] = {'$regex': publish_date}
+            if ISBN:
+                data_search['publish_info.ISBN'] = {'$regex': ISBN}
+            if binding:
+                data_search['publish_info.binding'] = {'$regex': binding}
+            if price:
+                data_search['publish_info.price'] = {'$regex': price}
+            if pages:
+                data_search['publish_info.pages'] = {'$regex': pages}
+            if words:
+                data_search['publish_info.words'] = {'$regex': words}
+            if publisher:
+                data_search['publish_info.publisher'] = {'$regex': publisher}
         if book_name:
-            data_search['book_name'] = book_name
+            data_search['book_name'] = {'$regex': book_name}
         if author_list:
-            data_search['author_list'] = author_list
+            data_search['author_list'] = {'$regex': author_list}
         if tags:
-            data_search['tags'] = tags
+            data_search['tags'] = {'$regex': tags}
         if score:
-            data_search['score'] = score
+            data_search['score'] = {'$regex': score}
         if summary:
-            data_search['summary'] = summary
+            data_search['summary'] = {'$regex': summary}
         if category:
-            data_search['category'] = category
+            data_search['category'] = {'$regex': category}
         if catalog_info:
-            data_search['catalog_info'] = catalog_info
-        if shelf_status:
+            data_search['catalog_info'] = {'$regex': catalog_info}
+        if shelf_status == '1':
             data_search['shelf_status'] = shelf_status
-        if check_status:
+        elif shelf_status == '0':
+            data_search['shelf_status'] = {'$or': [{'shelf_status': '0'}, {'shelf_status': {'$exists': 0}}]}
+        if check_status == '1':
             data_search['check_status'] = check_status
-        if publish_date:
-            data_search['publish_info.publish_date'] = publish_date
-        if ISBN:
-            data_search['publish_info.ISBN'] = ISBN
-        if binding:
-            data_search['publish_info.binding'] = binding
-        if price:
-            data_search['publish_info.price'] = price
-        if pages:
-            data_search['publish_info.pages'] = pages
-        if words:
-            data_search['publish_info.words'] = words
-        if publisher:
-            data_search['publish_info.publisher'] = publisher
-        books = db.t_books.find(data_search)
+        elif check_status == '0':
+            data_search['check_status'] = {'$or': [{'check_status': '0'}, {'check_status': {'$exists': 0}}]}
+        start = int(request.args.get('start', '0'))
+        end = int(request.args.get('end', '15'))
+        length = end - start
+        books = db.t_books.find(data_search).limit(length).skip(start)
         dataObj = {}
         data_list = []
         for data in books:
-            dataObj['book_id'] = data['_id']
+            dataObj['book_id'] = str(data['_id'])
             dataObj['book_name'] = data['book_name']
             dataObj['author_list'] = data['author_list']
             dataObj['category'] = data['category']
