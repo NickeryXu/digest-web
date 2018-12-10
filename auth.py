@@ -1,4 +1,4 @@
-from flask import session, jsonify
+from flask import session, jsonify, make_response
 from functools import wraps
 
 def sign_check():
@@ -23,3 +23,10 @@ def sign_check():
             return f(*args, **kwargs)
         return sign_function
     return sign_decorator
+
+def raise_status(status, result):
+    resp = make_response()
+    resp.status_code = status
+    resp.headers['content-type'] = 'plain/text'
+    resp.response = result
+    return resp

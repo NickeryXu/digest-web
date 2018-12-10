@@ -1,6 +1,6 @@
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, request, session, make_response
 from bson import ObjectId
-from auth import sign_check
+from auth import sign_check, raise_status
 
 user = Blueprint('user', __name__)
 
@@ -13,14 +13,17 @@ def signup():
     try:
         username = request.json.get('username')
         password = request.json.get('password')
-        mobile = request.json.get('mobile')
-        email = request.json.get('email')
-        remark = request.json.get('remark')
+        mobile = request.json.get('mobile', '')
+        email = request.json.get('email', '')
+        remark = request.json.get('remark', '')
         role_list = request.json.get('role_list')
         data_check = db.mg_user.find_one({'username': username})
         if data_check:
-            returnObj['info'] = {'status': '400', 'result': '用户名重复'}
+            return raise_status(400, '用户名重复')
         else:
+            if not username or not password or not role_list:
+                info = '有未填信息'
+                return raise_status(400, info)
             data = {
                 'username': username,
                 'password': password,
@@ -30,12 +33,11 @@ def signup():
                 'role_list': role_list
             }
             db.mg_user.insert(data)
-            returnObj['info'] = {'status': '200', 'result': '创建成功'}
+            returnObj['info'] = '创建成功'
+            return jsonify(returnObj)
     except Exception as e:
         print('signup error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))
 
 # 角色列表
 @user.route('/user/role_list', methods=['GET'])
@@ -51,7 +53,7 @@ def role_list():
         {'id': '204', 'name': '书籍管理', 'url': ''},
         {'id': '301', 'name': '用户管理', 'url': ''}
     ]
-    returnObj = {'role': list}
+    returnObj = {'data': list}
     return jsonify(returnObj)
 
 # 用户登录
@@ -88,18 +90,19 @@ def login():
             LoginTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             db.mg_user.update({'_id': data_check['_id']}, {'$set': {'RecentLogin': LoginTime}})
             returnObj['data'] = {'username': username, 'role': role}
-            returnObj['info'] = {'status': '200', 'result': '登录成功'}
+            returnObj['info'] = '登录成功'
+            return jsonify(returnObj)
         else:
             check_username = db.mg_user.find_one({'username': username})
             if check_username:
-                returnObj['info'] = {'status': '400', 'result': '密码错误'}
+                info = '密码错误'
+                return raise_status(400, info)
             else:
-                returnObj['info'] = {'status': '400', 'result': '不存在该用户'}
+                info = '不存在该用户'
+                return raise_status(400, info)
     except Exception as e:
         print('login error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))
 
 # 更改当前用户信息(每个人都有的权限)
 @user.route('/user/change', methods=['POST'])
@@ -125,12 +128,11 @@ def change():
         db.mg_user.update({'_id': ObjectId(session['id'])}, {'$set': data})
         session['username'] = username
         returnObj['data'] = {'username': username}
-        returnObj['info'] = {'status': '200', 'result': '修改成功'}
+        returnObj['info'] = '修改成功'
+        return jsonify(returnObj)
     except Exception as e:
         print('change error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))
 
 # 更改当前用户密码(每个人都有权限)
 @user.route('/user/password', methods=['POST'])
@@ -141,12 +143,10 @@ def change_password():
     try:
         password = request.json.get('password')
         db.mg_user.update({'_id': ObjectId(session['id'])}, {'$set': {'password': password}})
-        returnObj['info'] = {'status': '200', 'result': '修改成功'}
+        returnObj['info'] = '修改成功'
     except Exception as e:
         print('change_password error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))
 
 # 用户登出
 @user.route('/logout', methods=['GET'])

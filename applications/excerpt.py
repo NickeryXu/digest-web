@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
-from auth import sign_check
+from auth import sign_check, raise_status
 
 digest = Blueprint('digest', __name__)
 
@@ -58,12 +58,11 @@ def excerpt_search():
             excerptObj['ck_is_hot_exp'] = digest.get('ck_is_hot_exp', digest['is_hot_exp'])
             dataObj.append(excerptObj)
         returnObj['data'] = dataObj
-        returnObj['info'] = {'status': '200', 'result': '查询成功'}
+        returnObj['info'] = '查询成功'
+        return jsonify(returnObj)
     except Exception as e:
         print('excerpt_search error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))
 
 # 书摘修改
 @digest.route('/excerpt/update', methods=['POST'])
@@ -86,15 +85,14 @@ def excerpt_update():
         operation.append({session['id']: [session['username'], 'update']})
         data['operation'] = operation
         db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': data})
-        returnObj['info'] = {'status': '200', 'result': '修改成功'}
+        returnObj['info'] = '修改成功'
+        return jsonify(returnObj)
     except Exception as e:
         print('excerpt_update error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))
 
 # 书摘录入
-@digest.route('/excerpt/insert', methods=['PUT'])
+@digest.route('/excerpt/insert', methods=['POST'])
 @sign_check()
 def excerpt_insert():
     from app import db
@@ -106,6 +104,9 @@ def excerpt_insert():
         exp_chp_id = request.json.get('exp_chp_id')
         exp_chp_title = request.json.get('exp_chp_title')
         is_hot_exp = request.json.get('is_hot_exp')
+        if not book_id or not book_name or not exp_chp_title or not exp_chp_id or not exp_text or not is_hot_exp:
+            info = '有未填信息'
+            return raise_status(400, info)
         db.t_excerpts.insert({
             'book_id': book_id,
             'book_name': book_name,
@@ -114,12 +115,11 @@ def excerpt_insert():
             'exp_chp_title': exp_chp_title,
             'is_hot_exp': is_hot_exp
         })
-        returnObj['info'] = {'status': '200', 'result': '录入成功'}
+        returnObj['info'] = '录入成功'
+        return jsonify(returnObj)
     except Exception as e:
         print('excerpt_insert error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常 '}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))
 
 # 操作书摘
 @digest.route('/excerpt/operation', methods=['POST'])
@@ -160,9 +160,8 @@ def excerpt_operation():
                 operation = {session['id']: [session['username'], 'deprecated']}
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'recommend_status': '0'}})
-        returnObj['info'] = {'status': '200', 'result': '操作成功'}
+        returnObj['info'] = '操作成功'
+        return jsonify(returnObj)
     except Exception as e:
         print('excerpt_operation error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))

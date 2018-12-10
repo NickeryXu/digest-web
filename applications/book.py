@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
-from auth import sign_check
+from auth import sign_check, raise_status
 
 book = Blueprint('excerpt', __name__)
 
@@ -94,12 +94,11 @@ def book_search():
             dataObj['ck_publish_info'] = data.get('ck_publish_info', data['publish_info'])
             data_list.append(dataObj)
         returnObj['data'] = data_list
-        returnObj['info'] = {'status': '200', 'result': '查询成功'}
+        returnObj['info'] = '查询成功'
+        return jsonify(returnObj)
     except Exception as e:
         print('book_search error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))
 
 # 书籍修改
 @book.route('/book/update', methods=['POST'])
@@ -140,15 +139,14 @@ def book_update():
         operation = {session['id']: [session['username'], 'update']}
         db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
         db.t_books.update({'_id': ObjectId(book_id)}, {'$set': data_update})
-        returnObj['info'] = {'status': '200', 'result': '修改成功'}
+        returnObj['info'] = '修改成功'
+        return jsonify(returnObj)
     except Exception as e:
         print('book_update error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))
 
 # 书籍录入
-@book.route('/book/insert', methods=['PUT'])
+@book.route('/book/insert', methods=['POST'])
 @sign_check()
 def book_insert():
     from app import db
@@ -168,6 +166,10 @@ def book_insert():
         catalog_info = request.json.get('catalog_info')
         series = request.json.get('series')
         book_name = request.json.get('book_name')
+        if not tags or not score or not subtitle or not author_list or not all_version or not summary or not original_name\
+                or not category or not cover_thumbnail or not publish_info or not catalog_info or not series or not book_name:
+            info = '有未填信息'
+            return raise_status(400, info)
         dataObj = {}
         dataObj['book_name'] = book_name
         dataObj['tags'] = tags
@@ -183,12 +185,11 @@ def book_insert():
         dataObj['catalog_info'] = catalog_info
         dataObj['series'] = series
         db.t_books.insert(dataObj)
-        returnObj['info'] = {'status': '200', 'result': '录入成功'}
+        returnObj['info'] = '录入成功'
+        return jsonify(returnObj)
     except Exception as e:
         print('book_insert error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))
 
 # 操作书籍
 @book.route('/book/operation', methods=['POST'])
@@ -219,9 +220,8 @@ def book_operation():
                 operation = {session['id']: [session['username'], 'refuse']}
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'check_status': '0'}})
-        returnObj['info'] = {'status': '200', 'result': '操作成功'}
+        returnObj['info'] = '操作成功'
+        return jsonify(returnObj)
     except Exception as e:
         print('book_operation error as: ', e)
-        returnObj['info'] = {'status': '500', 'result': '后台异常'}
-    finally:
-        return jsonify(returnObj)
+        return raise_status(500, str(e))

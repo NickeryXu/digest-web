@@ -1,9 +1,11 @@
-from flask import Flask, json, session, redirect
+from flask import Flask
+from flask_cors import *
 import pymongo
 import config
 
 app = Flask('digest')
 app.config.from_object(config)
+CORS(app, supports_credentials=True)
 
 def register_blueprints():
     from applications.user import user
