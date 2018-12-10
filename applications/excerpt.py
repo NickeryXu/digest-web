@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
 from auth import sign_check, raise_status
+from datetime import datetime
 
 digest = Blueprint('digest', __name__)
 
@@ -61,7 +62,7 @@ def excerpt_search():
         returnObj['info'] = '查询成功'
         return jsonify(returnObj)
     except Exception as e:
-        print('excerpt_search error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- excerpt_search error as: ', e)
         return raise_status(500, str(e))
 
 # 书摘修改
@@ -88,7 +89,7 @@ def excerpt_update():
         returnObj['info'] = '修改成功'
         return jsonify(returnObj)
     except Exception as e:
-        print('excerpt_update error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- excerpt_update error as: ', e)
         return raise_status(500, str(e))
 
 # 书摘录入
@@ -118,7 +119,7 @@ def excerpt_insert():
         returnObj['info'] = '录入成功'
         return jsonify(returnObj)
     except Exception as e:
-        print('excerpt_insert error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- excerpt_insert error as: ', e)
         return raise_status(500, str(e))
 
 # 操作书摘
@@ -163,5 +164,5 @@ def excerpt_operation():
         returnObj['info'] = '操作成功'
         return jsonify(returnObj)
     except Exception as e:
-        print('excerpt_operation error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- excerpt_operation error as: ', e)
         return raise_status(500, str(e))

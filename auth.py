@@ -1,25 +1,19 @@
-from flask import session, jsonify, make_response
+from flask import session, make_response
 from functools import wraps
+from datetime import datetime
 
 def sign_check():
     def sign_decorator(f):
         @wraps(f)
         def sign_function(*args, **kwargs):
             try:
-                returnObj = {}
                 if 'username' not in session:
-                    print("can't find username in session")
-                    returnObj['data'] = {}
-                    returnObj['info'] = {"result": "400", "info": "请登录后进行操作"}
-                    return jsonify(returnObj)
-                print('session check success and go on!')
+                    print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "- can't find username in session")
+                    return raise_status(400, "请登录后进行操作")
+                # print('session check success and go on!')
             except Exception as e:
-                print("sign_check's error:", e)
-                returnObj['data'] = {}
-                returnObj['info'] = {"result": "500", "info": "check后台异常"}
-                return jsonify(returnObj)
-            finally:
-                pass
+                print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "- sign_check's error:", e)
+                return raise_status(500, "sign_check后台异常")
             return f(*args, **kwargs)
         return sign_function
     return sign_decorator

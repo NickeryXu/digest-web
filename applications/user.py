@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify, request, session, make_response
+from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
 from auth import sign_check, raise_status
+from datetime import datetime
 
 user = Blueprint('user', __name__)
 
@@ -36,7 +37,7 @@ def signup():
             returnObj['info'] = '创建成功'
             return jsonify(returnObj)
     except Exception as e:
-        print('signup error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- signup error as:', e)
         return raise_status(500, str(e))
 
 # 角色列表
@@ -101,7 +102,7 @@ def login():
                 info = '不存在该用户'
                 return raise_status(400, info)
     except Exception as e:
-        print('login error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- login error as: ', e)
         return raise_status(500, str(e))
 
 # 更改当前用户信息(每个人都有的权限)
@@ -131,7 +132,7 @@ def change():
         returnObj['info'] = '修改成功'
         return jsonify(returnObj)
     except Exception as e:
-        print('change error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- change error as: ', e)
         return raise_status(500, str(e))
 
 # 更改当前用户密码(每个人都有权限)
@@ -145,7 +146,7 @@ def change_password():
         db.mg_user.update({'_id': ObjectId(session['id'])}, {'$set': {'password': password}})
         returnObj['info'] = '修改成功'
     except Exception as e:
-        print('change_password error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- change_password error as: ', e)
         return raise_status(500, str(e))
 
 # 用户登出

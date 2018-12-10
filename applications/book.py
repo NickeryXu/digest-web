@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
 from auth import sign_check, raise_status
+from datetime import datetime
 
 book = Blueprint('excerpt', __name__)
 
@@ -97,7 +98,7 @@ def book_search():
         returnObj['info'] = '查询成功'
         return jsonify(returnObj)
     except Exception as e:
-        print('book_search error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_search error as: ', e)
         return raise_status(500, str(e))
 
 # 书籍修改
@@ -142,7 +143,7 @@ def book_update():
         returnObj['info'] = '修改成功'
         return jsonify(returnObj)
     except Exception as e:
-        print('book_update error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_update error as: ', e)
         return raise_status(500, str(e))
 
 # 书籍录入
@@ -188,7 +189,7 @@ def book_insert():
         returnObj['info'] = '录入成功'
         return jsonify(returnObj)
     except Exception as e:
-        print('book_insert error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_insert error as: ', e)
         return raise_status(500, str(e))
 
 # 操作书籍
@@ -223,5 +224,5 @@ def book_operation():
         returnObj['info'] = '操作成功'
         return jsonify(returnObj)
     except Exception as e:
-        print('book_operation error as: ', e)
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_operation error as: ', e)
         return raise_status(500, str(e))
