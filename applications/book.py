@@ -22,6 +22,7 @@ def book_search():
         publish_info = request.json.get('publish_info')
         shelf_status = request.json.get('shelf_status')
         check_status = request.json.get('check_status')
+        change_status = request.json.get('change_status')
         data_search = {}
         if publish_info:
             publish_date = publish_info.get('publish_date')
@@ -48,32 +49,45 @@ def book_search():
         if book_name:
             data_search['book_name'] = {'$regex': book_name}
         if author_list:
-            data_search['author_list'] = {'$regex': author_list}
+            data_search['author_list.author_name'] = {'$all': author_list}
         if tags:
-            data_search['tags'] = {'$regex': tags}
+            data_search['tags'] = {'$all': tags}
         if score:
             data_search['score'] = {'$regex': score}
         if summary:
             data_search['summary'] = {'$regex': summary}
         if category:
-            data_search['category'] = {'$regex': category}
+            data_search['category.name'] = {'$all': category}
         if catalog_info:
-            data_search['catalog_info'] = {'$regex': catalog_info}
-        if shelf_status == '1':
-            data_search['shelf_status'] = shelf_status
-        elif shelf_status == '0':
-            data_search['shelf_status'] = {'$or': [{'shelf_status': '0'}, {'shelf_status': {'$exists': 0}}]}
-        if check_status == '1':
-            data_search['check_status'] = check_status
-        elif check_status == '0':
-            data_search['check_status'] = {'$or': [{'check_status': '0'}, {'check_status': {'$exists': 0}}]}
+            data_search['catalog_info'] = {'$all': catalog_info}
+        if shelf_status or change_status or check_status:
+            data_search['$and'] = []
+            if shelf_status == '1':
+                data_search['shelf_status'] = shelf_status
+            elif shelf_status == '0':
+                shelf = {'$or': [{'shelf_status': '0'}, {'shelf_status': {'$exists': 0}}]}
+                data_search['$and'].append(shelf)
+                # data_search['$or'] = [{'shelf_status': '0'}, {'shelf_status': {'$exists': 0}}]
+            if check_status == '1':
+                data_search['check_status'] = check_status
+            elif check_status == '0':
+                check = {'$or': [{'check_status': '0'}, {'check_status': {'$exists': 0}}]}
+                data_search['$and'].append(check)
+                # data_search['$or'] = [{'check_status': '0'}, {'check_status': {'$exists': 0}}]
+            if change_status == '1':
+                data_search['change_status'] = change_status
+            elif change_status == '0':
+                change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}]}
+                data_search['$and'] = change
+                # data_search['$or'] = [{'change_status': '0'}, {'change_status': {'$exists': 0}}]
         start = int(request.args.get('start', '0'))
         end = int(request.args.get('end', '15'))
         length = end - start
+        count_book = db.t_books.find(data_search).count()
         books = db.t_books.find(data_search).limit(length).skip(start)
-        dataObj = {}
         data_list = []
         for data in books:
+            dataObj = {}
             dataObj['book_id'] = str(data['_id'])
             dataObj['book_name'] = data['book_name']
             dataObj['author_list'] = data['author_list']
@@ -93,8 +107,12 @@ def book_search():
             dataObj['ck_cover_thumbnail'] = data.get('ck_cover_thumbnail', data['cover_thumbnail'])
             dataObj['ck_score'] = data.get('ck_score', data['score'])
             dataObj['ck_publish_info'] = data.get('ck_publish_info', data['publish_info'])
+            dataObj['check_status'] = data.get('check_status', '0')
+            dataObj['shelf_status'] = data.get('shelf_status', '0')
+            dataObj['change_status'] = data.get('change_status', '0')
             data_list.append(dataObj)
         returnObj['data'] = data_list
+        returnObj['count'] = count_book
         returnObj['info'] = '查询成功'
         return jsonify(returnObj)
     except Exception as e:
@@ -118,6 +136,10 @@ def book_update():
         ck_cover_thumbnail = request.json.get('ck_cover_thumbnail')
         ck_score = request.json.get('ck_score')
         ck_publish_info = request.json.get('ck_publish_info')
+        if not ck_book_name and not ck_author_list and not ck_category and not ck_catalog_info and not ck_tags\
+            and not ck_summary and not ck_cover_thumbnail and not ck_score and not ck_publish_info:
+            info = '没有修改信息'
+            return raise_status(400, info)
         data_update = {}
         if ck_book_name:
             data_update['ck_book_name'] = ck_book_name
@@ -137,7 +159,8 @@ def book_update():
             data_update['ck_score'] = ck_score
         if ck_publish_info:
             data_update['ck_publish_info'] = ck_publish_info
-        operation = {session['id']: [session['username'], 'update']}
+        data_update['change_status'] = '1'
+        operation = {session['id']: [session['username'], 'update', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
         db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
         db.t_books.update({'_id': ObjectId(book_id)}, {'$set': data_update})
         returnObj['info'] = '修改成功'
@@ -185,6 +208,9 @@ def book_insert():
         dataObj['publish_info'] = publish_info
         dataObj['catalog_info'] = catalog_info
         dataObj['series'] = series
+        dataObj['change_status'] = '1'
+        dataObj['shelf_status'] = '0'
+        dataObj['check_status'] = '0'
         db.t_books.insert(dataObj)
         returnObj['info'] = '录入成功'
         return jsonify(returnObj)
@@ -210,17 +236,33 @@ def book_operation():
             for book_id in list:
                 operation = {session['id']: [session['username'], 'down']}
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
-                db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'shelf_status': '0'}})
+                db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'shelf_status': '0',
+                                                                        'change_status': '0', 'check_status': '0'}})
+                # 书籍下架时，书籍下的书摘也都下架，下架后修改状态为未修改、审核状态为未审核
+                db.t_excerpts.update({'bookid': book_id}, {'$push': {'operation': operation}})
+                db.t_excerpts.update({'bookid': book_id}, {'$set': {'shelf_status': '0',
+                                                                 'change_status': '0', 'check_status': '0'}})
         elif action == 'pass':
             for book_id in list:
                 operation = {session['id']: [session['username'], 'pass']}
+                data = db.t_books.find_one({'_id': ObjectId(book_id)})
+                data['book_name'] = data['ck_book_name']
+                data['author_list'] = data['ck_author_list']
+                data['category'] = data['ck_category']
+                data['catalog_info'] = data['ck_catalog_info']
+                data['tags'] = data['ck_tags']
+                data['summary'] = data['ck_summary']
+                data['cover_thumbnail'] = data['ck_cover_thumbnail']
+                data['score'] = data['ck_score']
+                data['publish_info'] = data['ck_publish_info']
+                data['check_status'] = '1'
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
-                db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'check_status': '1'}})
+                db.t_books.update({'_id': ObjectId(book_id)}, data)
         elif action == 'refuse':
             for book_id in list:
                 operation = {session['id']: [session['username'], 'refuse']}
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
-                db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'check_status': '0'}})
+                db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'check_status': '0', 'change_status': '0'}})
         returnObj['info'] = '操作成功'
         return jsonify(returnObj)
     except Exception as e:
