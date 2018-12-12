@@ -34,26 +34,27 @@ def excerpt_search():
         if is_hot_exp:
             data_search['is_hot_exp'] = {'$regex': is_hot_exp}
         if shelf_status or change_status or check_status or recommend_status:
-            data_search['$and'] = []
+            if shelf_status == '0' or check_status == '0' or change_status == '0':
+                data_search['$and'] = []
             if shelf_status == '1':
                 data_search['shelf_status'] = shelf_status
             elif shelf_status == '0':
                 shelf = {'$or': [{'shelf_status': '0'}, {'shelf_status': {'$exists': 0}}]}
                 data_search['$and'].append(shelf)
                 # data_search['$or'] = [{'shelf_status': '0'}, {'shelf_status': {'$exists': 0}}]
-            elif check_status == '1':
+            if check_status == '1':
                 data_search['check_status'] = check_status
             elif check_status == '0':
                 check = {'$or': [{'check_status': '0'}, {'check_status': {'$exists': 0}}]}
                 data_search['$and'].append(check)
                 # data_search['$or'] = [{'check_status': '0'}, {'check_status': {'$exists': 0}}]
-            elif change_status == '1':
+            if change_status == '1':
                 data_search['change_status'] = change_status
             elif change_status == '0':
                 change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}]}
                 data_search['$and'] = change
                 # data_search['$or'] = [{'change_status': '0'}, {'change_status': {'$exists': 0}}]
-            elif recommend_status == '1':
+            if recommend_status == '1':
                 data_search['recommend_status'] = recommend_status
             elif recommend_status == '0':
                 recommend = {'$or': [{'recommend_status': '0'}, {'recommend_status': {'$exists': 0}}]}
@@ -80,6 +81,7 @@ def excerpt_search():
             excerptObj['shelf_status'] = digest.get('shelf_status', '0')
             excerptObj['check_status'] = digest.get('check_status', '0')
             excerptObj['change_status'] = digest.get('change_status', '0')
+            excerptObj['recommend_status'] = digest.get('recommend_status', '0')
             dataObj.append(excerptObj)
         returnObj['data'] = dataObj
         returnObj['count'] = count_excerpt
@@ -127,25 +129,28 @@ def excerpt_insert():
     from app import db
     returnObj = {}
     try:
-        bookid = request.json.get('bookid')
+        bookid = request.json.get('book_id')
         book_name = request.json.get('book_name')
         exp_text = request.json.get('exp_text')
-        exp_chp_id = request.json.get('exp_chp_id')
-        exp_chp_title = request.json.get('exp_chp_title')
+        # exp_chp_id = request.json.get('exp_chp_id')
+        # exp_chp_title = request.json.get('exp_chp_title')
         is_hot_exp = request.json.get('is_hot_exp')
-        if not bookid or not book_name or not exp_chp_title or not exp_chp_id or not exp_text or not is_hot_exp:
+        if not bookid or not book_name or not exp_text or not is_hot_exp:
             info = '有未填信息'
             return raise_status(400, info)
+        operation = {session['id']: [session['username'], 'insert', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
         db.t_excerpts.insert({
             'bookid': bookid,
             'book_name': book_name,
             'exp_text': exp_text,
-            'exp_chp_id': exp_chp_id,
-            'exp_chp_title': exp_chp_title,
+            'exp_chp_id': '',
+            'exp_chp_title': '',
             'is_hot_exp': is_hot_exp,
+            'operation': operation,
             'check_status': '0',
             'shelf_status': '0',
-            'change_status': '1'
+            'change_status': '1',
+            'recommend_status': '0'
         })
         returnObj['info'] = '录入成功'
         return jsonify(returnObj)
@@ -160,42 +165,47 @@ def excerpt_operation():
     from app import db
     returnObj = {}
     try:
-        list = request.json.get('data')
+        list = request.json.get('list')
         action = request.args.get('action')
         if action == 'up':
             for excerpt_id in list:
-                operation = {session['id']: [session['username'], 'up']}
+                operation = {session['id']: [session['username'], 'up', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '1'}})
         elif action == 'down':
             for excerpt_id in list:
-                operation = {session['id']: [session['username'], 'down']}
+                operation = {session['id']: [session['username'], 'down', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
-                db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '0'}})
+                db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '0',\
+                                                                              'check_status': '0', 'change_status': '0'}})
         elif action == 'pass':
             for excerpt_id in list:
-                operation = {session['id']: [session['username'], 'pass']}
+                operation = {session['id']: [session['username'], 'pass', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 data = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
-                data['exp_chp_id'] = data['ck_exp_chp_id']
-                data['exp_chp_title'] = data['ck_exp_chp_title']
-                data['exp_text'] = data['ck_exp_text']
-                data['is_hot_exp'] = data['ck_is_hot_exp']
+                # data['exp_chp_id'] = data['ck_exp_chp_id']
+                # data['exp_chp_title'] = data['ck_exp_chp_title']
+                if data.get('ck_exp_text'):
+                    data['exp_text'] = data['ck_exp_text']
+                if data.get('ck_is_hot_exp'):
+                    data['is_hot_exp'] = data['ck_is_hot_exp']
                 data['check_status'] = "1"
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, data)
         elif action == 'refuse':
             for excerpt_id in list:
-                operation = {session['id']: [session['username'], 'refuse']}
+                operation = {session['id']: [session['username'], 'refuse', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'check_status': '0', 'change_status': '0'}})
         elif action == 'recommend':
             for excerpt_id in list:
-                operation = {session['id']: [session['username'], 'recommend']}
+                operation = {session['id']: [session['username'], 'recommend',\
+                                             datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'recommend_status': '1'}})
         elif action == 'deprecated':
             for excerpt_id in list:
-                operation = {session['id']: [session['username'], 'deprecated']}
+                operation = {session['id']: [session['username'], 'deprecated',\
+                                             datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'recommend_status': '0'}})
         returnObj['info'] = '操作成功'

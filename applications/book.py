@@ -61,7 +61,8 @@ def book_search():
         if catalog_info:
             data_search['catalog_info'] = {'$all': catalog_info}
         if shelf_status or change_status or check_status:
-            data_search['$and'] = []
+            if shelf_status == '0' or check_status == '0' or change_status == '0':
+                data_search['$and'] = []
             if shelf_status == '1':
                 data_search['shelf_status'] = shelf_status
             elif shelf_status == '0':
@@ -190,23 +191,37 @@ def book_insert():
         catalog_info = request.json.get('catalog_info')
         series = request.json.get('series')
         book_name = request.json.get('book_name')
-        if not tags or not score or not subtitle or not author_list or not all_version or not summary or not original_name\
-                or not category or not cover_thumbnail or not publish_info or not catalog_info or not series or not book_name:
+        if not tags or not score or not author_list or not summary\
+                or not category or not publish_info or not catalog_info or not book_name:
             info = '有未填信息'
             return raise_status(400, info)
         dataObj = {}
         dataObj['book_name'] = book_name
         dataObj['tags'] = tags
         dataObj['score'] = score
+        if not subtitle:
+            subtitle = ''
         dataObj['subtitle'] = subtitle
-        dataObj['author_list'] = author_list
+        list = []
+        for author in author_list:
+            simple = {'id': 100000, 'author_name': author}
+            list.append(simple)
+        dataObj['author_list'] = list
+        if not all_version:
+            all_version = []
         dataObj['all_version'] = all_version
         dataObj['summary'] = summary
+        if not original_name:
+            original_name = ''
         dataObj['original_name'] = original_name
         dataObj['category'] = category
+        if not cover_thumbnail:
+            cover_thumbnail = "http://wfqqreader-1252317822.image.myqcloud.com/cover/873/21031873/s_21031873.jpg"
         dataObj['cover_thumbnail'] = cover_thumbnail
         dataObj['publish_info'] = publish_info
         dataObj['catalog_info'] = catalog_info
+        if not series:
+            series = []
         dataObj['series'] = series
         dataObj['change_status'] = '1'
         dataObj['shelf_status'] = '0'
@@ -225,16 +240,16 @@ def book_operation():
     from app import db
     returnObj = {}
     try:
-        list = request.json.get('data')
+        list = request.json.get('list')
         action = request.args.get('action')
         if action == 'up':
             for book_id in list:
-                operation = {session['id']: [session['username'], 'up']}
+                operation = {session['id']: [session['username'], 'up', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'shelf_status': '1'}})
         elif action == 'down':
             for book_id in list:
-                operation = {session['id']: [session['username'], 'down']}
+                operation = {session['id']: [session['username'], 'down', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'shelf_status': '0',
                                                                         'change_status': '0', 'check_status': '0'}})
@@ -244,23 +259,32 @@ def book_operation():
                                                                  'change_status': '0', 'check_status': '0'}})
         elif action == 'pass':
             for book_id in list:
-                operation = {session['id']: [session['username'], 'pass']}
+                operation = {session['id']: [session['username'], 'pass', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 data = db.t_books.find_one({'_id': ObjectId(book_id)})
-                data['book_name'] = data['ck_book_name']
-                data['author_list'] = data['ck_author_list']
-                data['category'] = data['ck_category']
-                data['catalog_info'] = data['ck_catalog_info']
-                data['tags'] = data['ck_tags']
-                data['summary'] = data['ck_summary']
-                data['cover_thumbnail'] = data['ck_cover_thumbnail']
-                data['score'] = data['ck_score']
-                data['publish_info'] = data['ck_publish_info']
+                if data.get('ck_book_name'):
+                    data['book_name'] = data['ck_book_name']
+                if data.get('ck_author_list'):
+                    data['author_list'] = data['ck_author_list']
+                if data.get('ck_category'):
+                    data['category'] = data['ck_category']
+                if data.get('ck_catalog_info'):
+                    data['catalog_info'] = data['ck_catalog_info']
+                if data.get('ck_tags'):
+                    data['tags'] = data['ck_tags']
+                if data.get('ck_summary'):
+                    data['summary'] = data['ck_summary']
+                if data.get('ck_cover_thumbnail'):
+                    data['cover_thumbnail'] = data['ck_cover_thumbnail']
+                if data.get('ck_score'):
+                    data['score'] = data['ck_score']
+                if data.get('ck_publish_info'):
+                    data['publish_info'] = data['ck_publish_info']
                 data['check_status'] = '1'
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
                 db.t_books.update({'_id': ObjectId(book_id)}, data)
         elif action == 'refuse':
             for book_id in list:
-                operation = {session['id']: [session['username'], 'refuse']}
+                operation = {session['id']: [session['username'], 'refuse', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'check_status': '0', 'change_status': '0'}})
         returnObj['info'] = '操作成功'
