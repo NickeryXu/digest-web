@@ -20,7 +20,8 @@ def signup():
         role_list = request.json.get('role_list')
         data_check = db.mg_user.find_one({'username': username})
         if data_check:
-            return raise_status(400, '用户名重复')
+            info = '用户名重复'
+            return raise_status(400, info)
         else:
             if not username or not password or not role_list:
                 info = '有未填信息'
@@ -44,15 +45,16 @@ def signup():
 @user.route('/user/role_list', methods=['GET'])
 def role_list():
     list = [
-        {'id': '101', 'name': '书摘列表', 'url': ''},
-        {'id': '102', 'name': '书摘录入', 'url': ''},
-        {'id': '103', 'name': '书摘审核', 'url': ''},
-        {'id': '104', 'name': '书摘管理', 'url': ''},
-        {'id': '201', 'name': '书籍列表', 'url': ''},
-        {'id': '202', 'name': '书籍录入', 'url': ''},
-        {'id': '203', 'name': '书籍审核', 'url': ''},
-        {'id': '204', 'name': '书籍管理', 'url': ''},
-        {'id': '301', 'name': '用户管理', 'url': ''}
+        {'id': '101', 'name': '书摘列表', 'path': '/excerpt/search'},
+        {'id': '102', 'name': '书摘录入', 'path': '/excerpt/add'},
+        {'id': '103', 'name': '书摘审核', 'path': '/excerpt/check'},
+        {'id': '104', 'name': '书摘管理', 'path': '/excerpt/manage'},
+        {'id': '201', 'name': '书籍列表', 'path': '/book/search'},
+        {'id': '202', 'name': '书籍录入', 'path': '/book/add'},
+        {'id': '203', 'name': '书籍审核', 'path': '/book/check'},
+        {'id': '204', 'name': '书籍管理', 'path': '/book/manage'},
+        {'id': '301', 'name': '用户管理', 'path': '/user/manage'},
+        {'id': '302', 'name': '个人设置', 'path': '/user/profile'}
     ]
     returnObj = {'data': list}
     return jsonify(returnObj)
@@ -73,19 +75,21 @@ def login():
             role_list = data_check['role_list']
             role = []
             collection = {'1': '书摘模块', '2': '书籍模块', '3': '用户模块'}
+            icon_list = {'1': 'home', '2': 'yonghu', '3': 'yonghu'}
             # 数据库中取出该用户权限列表，判断并生成基础菜单和进阶菜单
             for single in role_list:
                 key = 0
                 for menu in role:
                     if single['id'][0] == menu.get('id'):
-                        menu['advanced_menu'].append(single)
+                        menu['children'].append(single)
                         key = 1
                 if key == 0:
                     menu_id = single['id'][0]
                     menu = {
                         'id': menu_id,
-                        'junior_menu': collection[menu_id],
-                        'advanced_menu': [single]
+                        'name': collection[menu_id],
+                        'icon': icon_list[menu_id],
+                        'children': [single]
                     }
                     role.append(menu)
             LoginTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -121,14 +125,14 @@ def user_profile():
             key = 0
             for menu in role:
                 if single['id'][0] == menu.get('id'):
-                    menu['advanced_menu'].append(single)
+                    menu['children'].append(single)
                     key = 1
             if key == 0:
                 menu_id = single['id'][0]
                 menu = {
                     'id': menu_id,
-                    'junior_menu': collection[menu_id],
-                    'advanced_menu': [single]
+                    'name': collection[menu_id],
+                    'children': [single]
                 }
                 role.append(menu)
         username = session['username']
@@ -161,9 +165,13 @@ def change():
         mobile = request.json.get('mobile')
         email = request.json.get('email')
         remark = request.json.get('remark')
+        password = request.json.get('password')
         data = {}
         # 不一定每个字段都要修改，没有的就忽略掉
         if username:
+            if db.mg_user.find_one({'username': username}):
+                info = '用户名重复'
+                return raise_status(400, info)
             data['username'] = username
         if mobile:
             data['mobile'] = mobile
@@ -171,6 +179,8 @@ def change():
             data['email'] = email
         if remark:
             data['remark'] = remark
+        if password:
+            data['password'] = password
         db.mg_user.update({'_id': ObjectId(session['id'])}, {'$set': data})
         session['username'] = username
         returnObj['data'] = {'username': username}

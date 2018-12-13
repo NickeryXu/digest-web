@@ -141,19 +141,23 @@ def excerpt_insert():
         data = db.t_books.find_one({'_id': ObjectId(bookid)})
         book_name = data['book_name']
         operation = {session['id']: [session['username'], 'insert', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
-        db.t_excerpts.insert({
-            'bookid': bookid,
-            'book_name': book_name,
-            'exp_text': exp_text,
-            'exp_chp_id': '',
-            'exp_chp_title': '',
-            'is_hot_exp': is_hot_exp,
-            'operation': [operation],
-            'check_status': '0',
-            'shelf_status': '0',
-            'change_status': '1',
-            'recommend_status': '0'
-        })
+        data_insert = []
+        for content in exp_text:
+            excerpt = {
+                'bookid': bookid,
+                'book_name': book_name,
+                'exp_text': content,
+                'exp_chp_id': '',
+                'exp_chp_title': '',
+                'is_hot_exp': is_hot_exp,
+                'operation': [operation],
+                'check_status': '0',
+                'shelf_status': '0',
+                'change_status': '1',
+                'recommend_status': '0'
+            }
+            data_insert.append(excerpt)
+        db.t_excerpts.insert_many(data_insert)
         returnObj['info'] = '录入成功'
         return jsonify(returnObj)
     except Exception as e:
