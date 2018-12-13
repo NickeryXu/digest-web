@@ -146,7 +146,7 @@ def excerpt_insert():
             'exp_chp_id': '',
             'exp_chp_title': '',
             'is_hot_exp': is_hot_exp,
-            'operation': operation,
+            'operation': [operation],
             'check_status': '0',
             'shelf_status': '0',
             'change_status': '1',

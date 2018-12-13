@@ -223,6 +223,8 @@ def book_insert():
         if not series:
             series = []
         dataObj['series'] = series
+        operation = {session['id']: [session['username'], 'insert', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
+        dataObj['operation'] = [operation]
         dataObj['change_status'] = '1'
         dataObj['shelf_status'] = '0'
         dataObj['check_status'] = '0'
