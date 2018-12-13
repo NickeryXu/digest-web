@@ -129,7 +129,7 @@ def excerpt_insert():
     from app import db
     returnObj = {}
     try:
-        bookid = request.json.get('book_id')
+        bookid = request.json.get('bookid')
         # book_name = request.json.get('book_name')
         exp_text = request.json.get('exp_text')
         # exp_chp_id = request.json.get('exp_chp_id')
