@@ -130,14 +130,16 @@ def excerpt_insert():
     returnObj = {}
     try:
         bookid = request.json.get('book_id')
-        book_name = request.json.get('book_name')
+        # book_name = request.json.get('book_name')
         exp_text = request.json.get('exp_text')
         # exp_chp_id = request.json.get('exp_chp_id')
         # exp_chp_title = request.json.get('exp_chp_title')
         is_hot_exp = request.json.get('is_hot_exp')
-        if not bookid or not book_name or not exp_text or not is_hot_exp:
+        if not bookid or not exp_text or not is_hot_exp:
             info = '有未填信息'
             return raise_status(400, info)
+        data = db.t_books.find_one({'_id': ObjectId(bookid)})
+        book_name = data['book_name']
         operation = {session['id']: [session['username'], 'insert', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
         db.t_excerpts.insert({
             'bookid': bookid,
