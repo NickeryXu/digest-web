@@ -105,6 +105,51 @@ def login():
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- login error as: ', e)
         return raise_status(500, str(e))
 
+# 查询用户菜单
+@user.route('/user/profile', methods=['GET'])
+@sign_check()
+def user_profile():
+    from app import db
+    try:
+        user_id = session['id']
+        data = db.mg_user.find_one({'_id': ObjectId(user_id)})
+        role_list = data['role_list']
+        role = []
+        collection = {'1': '书摘模块', '2': '书籍模块', '3': '用户模块'}
+        # 数据库中取出该用户权限列表，判断并生成基础菜单和进阶菜单
+        for single in role_list:
+            key = 0
+            for menu in role:
+                if single['id'][0] == menu.get('id'):
+                    menu['advanced_menu'].append(single)
+                    key = 1
+            if key == 0:
+                menu_id = single['id'][0]
+                menu = {
+                    'id': menu_id,
+                    'junior_menu': collection[menu_id],
+                    'advanced_menu': [single]
+                }
+                role.append(menu)
+        username = session['username']
+        email = data.get('email')
+        mobile = data.get('mobile')
+        remark = data.get('remark')
+        returnObj = {
+            'data': {
+                'username': username,
+                'email': email,
+                'mobile': mobile,
+                'role_list': role,
+                'remark': remark
+            },
+            'info': '查询成功'
+        }
+        return jsonify(returnObj)
+    except Exception as e:
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- user_profile error as: ', e)
+        return raise_status(500, str(e))
+
 # 更改当前用户信息(每个人都有的权限)
 @user.route('/user/change', methods=['POST'])
 @sign_check()
