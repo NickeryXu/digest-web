@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
-from auth import sign_check, raise_status
+from auth import sign_check, raise_status, es_delete, es_insert
 from datetime import datetime
 
 digest = Blueprint('digest', __name__)
@@ -34,7 +34,7 @@ def excerpt_search():
         if is_hot_exp:
             data_search['is_hot_exp'] = {'$regex': is_hot_exp}
         if shelf_status or change_status or check_status or recommend_status:
-            if shelf_status == '0' or check_status == '0' or change_status == '0':
+            if shelf_status == '0' or check_status == '0' or change_status == '0' or recommend_status == '0':
                 data_search['$and'] = []
             if shelf_status == '1':
                 data_search['shelf_status'] = shelf_status
@@ -52,15 +52,15 @@ def excerpt_search():
                 data_search['change_status'] = change_status
             elif change_status == '0':
                 change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}]}
-                data_search['$and'] = change
+                data_search['$and'].append(change)
                 # data_search['$or'] = [{'change_status': '0'}, {'change_status': {'$exists': 0}}]
             if recommend_status == '1':
                 data_search['recommend_status'] = recommend_status
             elif recommend_status == '0':
                 recommend = {'$or': [{'recommend_status': '0'}, {'recommend_status': {'$exists': 0}}]}
-                data_search['$and'] = recommend
+                data_search['$and'].append(recommend)
         start = int(request.args.get('start', '0'))
-        end = int(request.args.get('end', '15'))
+        end = int(request.args.get('end', '30'))
         length = end - start
         count_excerpt = db.t_excerpts.find(data_search).count()
         data = db.t_excerpts.find(data_search).limit(length).skip(start)
@@ -175,15 +175,24 @@ def excerpt_operation():
         action = request.args.get('action')
         if action == 'up':
             for excerpt_id in list:
-                operation = {session['id']: [session['username'], 'up', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
-                db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
-                db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '1'}})
+                data_excerpt = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
+                data_check = db.t_books.find_one({'_id': ObjectId(data_excerpt['bookid'])})
+                if data_check.get('shelf_status') == '1':
+                    operation = {session['id']: [session['username'], 'up', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
+                    db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
+                    db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '1'}})
+                    del data_check['_id']
+                    es_insert('t_excerpts', excerpt_id, data_check)
+                else:
+                    info = '有书籍未上架'
+                    return raise_status(400, info)
         elif action == 'down':
             for excerpt_id in list:
                 operation = {session['id']: [session['username'], 'down', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '0',\
                                                                               'check_status': '0', 'change_status': '0'}})
+                es_delete('t_excerpts', excerpt_id)
         elif action == 'pass':
             for excerpt_id in list:
                 operation = {session['id']: [session['username'], 'pass', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
@@ -204,10 +213,15 @@ def excerpt_operation():
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'check_status': '0', 'change_status': '0'}})
         elif action == 'recommend':
             for excerpt_id in list:
-                operation = {session['id']: [session['username'], 'recommend',\
-                                             datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
-                db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
-                db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'recommend_status': '1'}})
+                data_check = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
+                if data_check['shelf_status'] == '1':
+                    operation = {session['id']: [session['username'], 'recommend',\
+                                                 datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
+                    db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
+                    db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'recommend_status': '1'}})
+                else:
+                    info = '有未上架书摘'
+                    return raise_status(400, info)
         elif action == 'deprecated':
             for excerpt_id in list:
                 operation = {session['id']: [session['username'], 'deprecated',\

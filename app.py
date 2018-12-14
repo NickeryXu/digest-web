@@ -18,4 +18,4 @@ register_blueprints()
 
 client = pymongo.MongoClient(app.config['MONGODB_HOST'], app.config['MONGODB_PORT'])
 db = client[app.config['DATABASE']]
-# db.authenticate(app.config['USERNAME'], app.config['PASSWORD'])
+db.authenticate(app.config['USERNAME'], app.config['PASSWORD'])

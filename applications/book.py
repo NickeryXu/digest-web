@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
-from auth import sign_check, raise_status
+from auth import sign_check, raise_status, es_delete, es_insert
 from datetime import datetime
 
 book = Blueprint('excerpt', __name__)
@@ -79,12 +79,13 @@ def book_search():
                 data_search['change_status'] = change_status
             elif change_status == '0':
                 change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}]}
-                data_search['$and'] = change
+                data_search['$and'].append(change)
                 # data_search['$or'] = [{'change_status': '0'}, {'change_status': {'$exists': 0}}]
         start = int(request.args.get('start', '0'))
-        end = int(request.args.get('end', '15'))
+        end = int(request.args.get('end', '30'))
         length = end - start
-        count_book = db.t_books.find(data_search).count()
+        count_book = 8000000
+        # count_book = db.t_books.find(data_search).count()
         books = db.t_books.find(data_search).limit(length).skip(start)
         data_list = []
         for data in books:
@@ -249,6 +250,9 @@ def book_operation():
                 operation = {session['id']: [session['username'], 'up', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'shelf_status': '1'}})
+                data_insert = db.t_books.find_one({'_id': ObjectId(book_id)})
+                del data_insert['_id']
+                es_insert('t_books', book_id, data_insert)
         elif action == 'down':
             for book_id in list:
                 operation = {session['id']: [session['username'], 'down', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
@@ -259,6 +263,7 @@ def book_operation():
                 db.t_excerpts.update({'bookid': book_id}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'bookid': book_id}, {'$set': {'shelf_status': '0',
                                                                  'change_status': '0', 'check_status': '0'}})
+                es_delete('t_books', book_id)
         elif action == 'pass':
             for book_id in list:
                 operation = {session['id']: [session['username'], 'pass', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}

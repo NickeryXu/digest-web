@@ -1,4 +1,5 @@
 from flask import session, make_response
+from elasticsearch import Elasticsearch
 from functools import wraps
 from datetime import datetime
 
@@ -24,3 +25,11 @@ def raise_status(status, result):
     resp.headers['content-type'] = 'plain/text'
     resp.response = result
     return resp
+
+def es_insert(index, eid, data):
+    es = Elasticsearch(['47.110.77.43:9200'])
+    es.index(index=index, doc_type='digest', id=eid, body=data)
+
+def es_delete(index, eid):
+    es = Elasticsearch(['47.110.77.43:9200'])
+    es.delete(index=index, doc_type='digest', id=eid)
