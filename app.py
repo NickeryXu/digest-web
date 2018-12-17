@@ -1,10 +1,12 @@
 from flask import Flask
 from flask_cors import *
+from datetime import timedelta
 import pymongo
 import config
 
 app = Flask('digest')
 app.config.from_object(config)
+# app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hour=2)
 CORS(app, supports_credentials=True)
 
 def register_blueprints():

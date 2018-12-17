@@ -92,7 +92,9 @@ def book_search():
             dataObj = {}
             dataObj['book_id'] = str(data['_id'])
             dataObj['book_name'] = data['book_name']
-            dataObj['author_list'] = data['author_list']
+            dataObj['author_list'] = []
+            for author in data['author_list']:
+                dataObj['author_list'].append(author['author_name'])
             dataObj['category'] = data['category']
             dataObj['catalog_info'] = data['catalog_info']
             dataObj['tags'] = data['tags']
@@ -101,7 +103,9 @@ def book_search():
             dataObj['score'] = data['score']
             dataObj['publish_info'] = data['publish_info']
             dataObj['ck_book_name'] = data.get('ck_book_name', data['book_name'])
-            dataObj['ck_author_list'] = data.get('ck_author_list', data['author_list'])
+            dataObj['ck_author_list'] = []
+            for author in data.get('ck_author_list', data['author_list']):
+                dataObj['ck_author_list'].append(author['author_name'])
             dataObj['ck_category'] = data.get('ck_category', data['category'])
             dataObj['ck_catalog_info'] = data.get('ck_catalog_info', data['catalog_info'])
             dataObj['ck_tags'] = data.get('ck_tags', data['tags'])

@@ -10,7 +10,7 @@ def sign_check():
             try:
                 if 'username' not in session:
                     print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "- can't find username in session")
-                    return raise_status(400, "请登录后进行操作")
+                    return raise_status(401, "请登录后进行操作")
                 # print('session check success and go on!')
             except Exception as e:
                 print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "- sign_check's error:", e)

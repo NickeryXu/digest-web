@@ -208,4 +208,7 @@ def change_password():
 @user.route('/logout', methods=['GET'])
 def logout():
     info = {'info': '退出登录'}
+    print(session)
+    del session['id']
+    del session['username']
     return jsonify(info)
