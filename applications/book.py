@@ -132,43 +132,36 @@ def book_update():
     from app import db
     returnObj = {}
     try:
-        book_id = request.json.get('book_id')
-        ck_book_name = request.json.get('ck_book_name')
-        ck_author_list = request.json.get('ck_author_list')
-        ck_category = request.json.get('ck_category')
-        ck_catalog_info = request.json.get('ck_catalog_info')
-        ck_tags = request.json.get('ck_tags')
-        ck_summary = request.json.get('ck_summary')
-        ck_cover_thumbnail = request.json.get('ck_cover_thumbnail')
-        ck_score = request.json.get('ck_score')
-        ck_publish_info = request.json.get('ck_publish_info')
-        if not ck_book_name and not ck_author_list and not ck_category and not ck_catalog_info and not ck_tags\
-            and not ck_summary and not ck_cover_thumbnail and not ck_score and not ck_publish_info:
-            info = '没有修改信息'
-            return raise_status(400, info)
-        data_update = {}
-        if ck_book_name:
+        book_list = request.json.get('book_list')
+        for data_book in book_list:
+            book_id = data_book.get('book_id')
+            ck_book_name = data_book.get('ck_book_name')
+            ck_author_list = data_book.get('ck_author_list')
+            ck_category = data_book.get('ck_category')
+            ck_catalog_info = data_book.get('ck_catalog_info')
+            ck_tags = data_book.get('ck_tags')
+            ck_summary = data_book.get('ck_summary')
+            ck_cover_thumbnail = data_book.get('ck_cover_thumbnail')
+            ck_score = data_book.get('ck_score')
+            ck_publish_info = data_book.get('ck_publish_info')
+            # if not ck_book_name and not ck_author_list and not ck_category and not ck_catalog_info and not ck_tags\
+            #     and not ck_summary and not ck_cover_thumbnail and not ck_score and not ck_publish_info:
+            #     info = '没有修改信息'
+            #     return raise_status(400, info)
+            data_update = {}
             data_update['ck_book_name'] = ck_book_name
-        if ck_author_list:
             data_update['ck_author_list'] = ck_author_list
-        if ck_category:
             data_update['ck_category'] = ck_category
-        if ck_catalog_info:
             data_update['ck_catalog_info'] = ck_catalog_info
-        if ck_tags:
             data_update['ck_tags'] = ck_tags
-        if ck_summary:
             data_update['ck_summary'] = ck_summary
-        if ck_cover_thumbnail:
             data_update['ck_cover_thumbnail'] = ck_cover_thumbnail
-        if ck_score:
             data_update['ck_score'] = ck_score
-        if ck_publish_info:
             data_update['ck_publish_info'] = ck_publish_info
-        data_update['change_status'] = '1'
-        operation = {session['id']: [session['username'], 'update', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
-        db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
-        db.t_books.update({'_id': ObjectId(book_id)}, {'$set': data_update})
+            data_update['change_status'] = '1'
+            operation = {session['id']: [session['username'], 'update', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
+            db.t_books.update({'_id': ObjectId(book_id)}, {'$set': data_update})
+            db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
         returnObj['info'] = '修改成功'
         return jsonify(returnObj)
     except Exception as e:
@@ -303,3 +296,18 @@ def book_operation():
     except Exception as e:
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_operation error as: ', e)
         return raise_status(500, str(e))
+
+# 删除书籍
+@book.route('/book/del', methods=['DELETE'])
+@sign_check()
+def book_delete():
+    from app import db
+    returnObj = {}
+    try:
+        book_list = request.json.get('book_list')
+        for book_id in book_list:
+            db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'change_status': '2'}})
+        returnObj['info'] = '操作成功'
+    except Exception as e:
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_delete error as: ', e)
+        raise_status(500, str(e))

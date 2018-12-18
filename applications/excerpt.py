@@ -98,24 +98,35 @@ def excerpt_update():
     from app import db
     returnObj = {}
     try:
-        excerpt_id = request.json.get('excerpt_id')
-        ck_exp_chp_id = request.json.get('ck_exp_chp_id')
-        ck_exp_chp_title = request.json.get('ck_exp_chp_title')
-        ck_exp_text = request.json.get('ck_exp_text')
-        ck_is_hot_exp = request.json.get('ck_is_hot_exp')
-        if not ck_is_hot_exp and not ck_exp_text and not ck_exp_chp_title and not ck_exp_chp_id:
-            info = '没有修改信息'
-            return raise_status(400, info)
-        data = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
-        data['ck_exp_chp_id'] = ck_exp_chp_id
-        data['ck_exp_chp_title'] = ck_exp_chp_title
-        data['ck_exp_text'] = ck_exp_text
-        data['ck_is_hot_exp'] = ck_is_hot_exp
-        data['change_status'] = '1'
-        operation = data.get('operation', [])
-        operation.append({session['id']: [session['username'], 'update', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]})
-        data['operation'] = operation
-        db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': data})
+        excerpt_list = request.json.get('excerpt_list')
+        for data_book in excerpt_list:
+            excerpt_id = data_book.get('excerpt_id')
+            ck_exp_chp_id = data_book.get('ck_exp_chp_id')
+            ck_exp_chp_title = data_book.get('ck_exp_chp_title')
+            ck_exp_text = data_book.get('ck_exp_text')
+            ck_is_hot_exp = data_book.get('ck_is_hot_exp')
+            # if not ck_is_hot_exp and not ck_exp_text and not ck_exp_chp_title and not ck_exp_chp_id:
+            #     info = '没有修改信息'
+            #     return raise_status(400, info)
+            db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {
+                'ck_exp_chp_id': ck_exp_chp_id,
+                'ck_exp_chp_title': ck_exp_chp_title,
+                'ck_exp_text': ck_exp_text,
+                'ck_is_hot_exp': ck_is_hot_exp,
+                'change_status': '1'
+            }})
+            operation = {session['id']: [session['username'], 'update', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
+            db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
+            # data['ck_exp_chp_id'] = ck_exp_chp_id
+            # data['ck_exp_chp_title'] = ck_exp_chp_title
+            # data['ck_exp_text'] = ck_exp_text
+            # data['ck_is_hot_exp'] = ck_is_hot_exp
+            # data['change_status'] = '1'
+            # operation = data.get('operation', [])
+            # operation.append({session['id']: [session['username'],'update',\
+            #                                   datetime.now().strftime('%Y-%m-%d %H:%M:%S')]})
+            # data['operation'] = operation
+            # db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': data})
         returnObj['info'] = '修改成功'
         return jsonify(returnObj)
     except Exception as e:
@@ -199,6 +210,8 @@ def excerpt_operation():
                 data = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
                 # data['exp_chp_id'] = data['ck_exp_chp_id']
                 # data['exp_chp_title'] = data['ck_exp_chp_title']
+                if data.get('change_status') == '2':
+                    db.t_excerpts.remove({'_id': ObjectId(excerpt_id)})
                 if data.get('ck_exp_text'):
                     data['exp_text'] = data['ck_exp_text']
                 if data.get('ck_is_hot_exp'):
@@ -232,4 +245,20 @@ def excerpt_operation():
         return jsonify(returnObj)
     except Exception as e:
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- excerpt_operation error as: ', e)
+        return raise_status(500, str(e))
+
+# 删除书摘
+@digest.route('/excerpt/del', methods=['DELETE'])
+@sign_check()
+def excerpt_delete():
+    from app import db
+    returnObj = {}
+    try:
+        excerpt_list = request.json.get('excerpt_list')
+        for excerpt in excerpt_list:
+            db.t_excerpts.update({'_id': ObjectId(excerpt)}, {'$set': {'change_status': '2'}})
+        returnObj['info'] = '操作成功'
+        return jsonify(returnObj)
+    except Exception as e:
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- excerpt_delete error as: ', e)
         return raise_status(500, str(e))
