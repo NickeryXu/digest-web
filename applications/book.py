@@ -86,7 +86,7 @@ def book_search():
         length = end - start
         count_book = 8000000
         # count_book = db.t_books.find(data_search).count()
-        books = db.t_books.find(data_search).limit(length).skip(start).sort([('score', 1)])
+        books = db.t_books.find(data_search).limit(length).skip(start).sort([('score', -1)])
         data_list = []
         for data in books:
             dataObj = {}
