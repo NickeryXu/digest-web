@@ -86,7 +86,7 @@ def book_search():
         length = end - start
         count_book = 8000000
         # count_book = db.t_books.find(data_search).count()
-        books = db.t_books.find(data_search).limit(length).skip(start)
+        books = db.t_books.find(data_search).limit(length).skip(start).sort([('score', 1)])
         data_list = []
         for data in books:
             dataObj = {}
@@ -136,7 +136,11 @@ def book_update():
         for data_book in book_list:
             book_id = data_book.get('book_id')
             ck_book_name = data_book.get('ck_book_name')
-            ck_author_list = data_book.get('ck_author_list')
+            author_list = data_book.get('ck_author_list')
+            ck_author_list = []
+            for author in author_list:
+                id = 100000
+                ck_author_list.append({'id': id, 'author_name': author})
             ck_category = data_book.get('ck_category')
             ck_catalog_info = data_book.get('ck_catalog_info')
             ck_tags = data_book.get('ck_tags')
@@ -265,6 +269,9 @@ def book_operation():
             for book_id in list:
                 operation = {session['id']: [session['username'], 'pass', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 data = db.t_books.find_one({'_id': ObjectId(book_id)})
+                if data.get('change_status') == '2':
+                    db.t_excerpt.remove({'bookid': ObjectId(book_id)})
+                    db.t_books.remove({'_id': ObjectId(book_id)})
                 if data.get('ck_book_name'):
                     data['book_name'] = data['ck_book_name']
                 if data.get('ck_author_list'):
