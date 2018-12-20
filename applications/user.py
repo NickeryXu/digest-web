@@ -53,7 +53,7 @@ def role_list():
         {'id': '202', 'name': '书籍录入', 'path': '/book/add'},
         {'id': '203', 'name': '书籍审核', 'path': '/book/check'},
         {'id': '204', 'name': '书籍上架', 'path': '/book/manage'},
-        {'id': '301', 'name': '用户管理', 'path': '/user/manage'},
+        {'id': '301', 'name': '添加用户', 'path': '/user/manage'},
         {'id': '302', 'name': '个人设置', 'path': '/user/profile'}
     ]
     returnObj = {'data': list}
@@ -200,6 +200,7 @@ def change_password():
         password = request.json.get('password')
         db.mg_user.update({'_id': ObjectId(session['id'])}, {'$set': {'password': password}})
         returnObj['info'] = '修改成功'
+        return jsonify(returnObj)
     except Exception as e:
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- change_password error as: ', e)
         return raise_status(500, str(e))
@@ -212,3 +213,69 @@ def logout():
     del session['id']
     del session['username']
     return jsonify(info)
+
+# 用户列表
+@user.route('/user/manage', methods=['GET'])
+@sign_check()
+def user_manage():
+    from app import db
+    returnObj = {}
+    try:
+        start = int(request.args.get('start', 0))
+        end = int(request.args.get('end', 20))
+        lmt = end - start
+        data_user = db.mg_user.find().limit(lmt).skip(start).sort([('username', 1)])
+        count = db.mg_user.find().count()
+        returnObj['data'] = []
+        for User in data_user:
+            username = User['username']
+            role_list = User['role_list']
+            role = []
+            collection = {'1': '书摘模块', '2': '书籍模块', '3': '用户模块'}
+            # 数据库中取出该用户权限列表，判断并生成基础菜单和进阶菜单
+            for single in role_list:
+                key = 0
+                for menu in role:
+                    if single['id'][0] == menu.get('id'):
+                        menu['children'].append(single)
+                        key = 1
+                if key == 0:
+                    menu_id = single['id'][0]
+                    menu = {
+                        'id': menu_id,
+                        'name': collection[menu_id],
+                        'children': [single]
+                    }
+                    role.append(menu)
+            email = User['email']
+            mobile = User['mobile']
+            remark = User['remark']
+            uid = str(User['_id'])
+            returnObj['data'].append({
+                'uid': uid,
+                'username': username,
+                'mobile': mobile,
+                'email': email,
+                'role_list': role,
+                'remark': remark
+            })
+            returnObj['count'] = count
+        return jsonify(returnObj)
+    except Exception as e:
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- user_manage error as: ', e)
+        return raise_status(500, str(e))
+
+# 用户删除
+@user.route('/user/del', methods=['POST'])
+@sign_check()
+def user_delete():
+    from app import db
+    returnObj = {}
+    try:
+        user_list = request.json.get('user_list')
+        for User in user_list:
+            db.mg_user.remove({'username': User})
+        returnObj['info'] = '操作成功'
+    except Exception as e:
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- user_delete error as: ', e)
+        return raise_status(500, str(e))

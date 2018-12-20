@@ -81,6 +81,9 @@ def book_search():
                 change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}]}
                 data_search['$and'].append(change)
                 # data_search['$or'] = [{'change_status': '0'}, {'change_status': {'$exists': 0}}]
+            elif change_status == '11':
+                change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}, {'change_status': '1'}]}
+                data_search['$and'].append(change)
         start = int(request.args.get('start', '0'))
         end = int(request.args.get('end', '30'))
         length = end - start
@@ -139,8 +142,7 @@ def book_update():
             author_list = data_book.get('ck_author_list')
             ck_author_list = []
             for author in author_list:
-                id = 100000
-                ck_author_list.append({'id': id, 'author_name': author})
+                ck_author_list.append(author)
             ck_category = data_book.get('ck_category')
             ck_catalog_info = data_book.get('ck_catalog_info')
             ck_tags = data_book.get('ck_tags')
@@ -317,4 +319,19 @@ def book_delete():
         returnObj['info'] = '操作成功'
     except Exception as e:
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_delete error as: ', e)
+        raise_status(500, str(e))
+
+# 书籍封面
+@book.route('/book/image/<book_id>', methods=['POST'])
+# @sign_check()
+def book_image(book_id):
+    from app import db
+    returnObj = {}
+    try:
+        while True:
+            type = request.args.get('type')
+            file = request.files.get('file')
+        return ''
+    except Exception as e:
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_image error as: ', e)
         raise_status(500, str(e))
