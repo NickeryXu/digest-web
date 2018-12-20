@@ -84,6 +84,9 @@ def book_search():
             elif change_status == '11':
                 change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}, {'change_status': '1'}]}
                 data_search['$and'].append(change)
+            elif change_status == '12':
+                change = {'$or': [{'change_status': '1'}, {'change_status': '2'}]}
+                data_search['$and'].append(change)
         start = int(request.args.get('start', '0'))
         end = int(request.args.get('end', '30'))
         length = end - start
@@ -142,7 +145,7 @@ def book_update():
             author_list = data_book.get('ck_author_list')
             ck_author_list = []
             for author in author_list:
-                ck_author_list.append(author)
+                ck_author_list.append({'id': 1000000, 'author_name': author})
             ck_category = data_book.get('ck_category')
             ck_catalog_info = data_book.get('ck_catalog_info')
             ck_tags = data_book.get('ck_tags')
@@ -317,6 +320,7 @@ def book_delete():
         for book_id in book_list:
             db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'change_status': '2'}})
         returnObj['info'] = '操作成功'
+        return jsonify(returnObj)
     except Exception as e:
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_delete error as: ', e)
         raise_status(500, str(e))

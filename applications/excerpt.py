@@ -57,6 +57,9 @@ def excerpt_search():
             elif change_status == '11':
                 change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}, {'change_status': '1'}]}
                 data_search['$and'].append(change)
+            elif change_status == '12':
+                change = {'$or': [{'change_status': '1'}, {'change_status': '2'}]}
+                data_search['$and'].append(change)
             if recommend_status == '1':
                 data_search['recommend_status'] = recommend_status
             elif recommend_status == '0':
