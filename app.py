@@ -18,6 +18,6 @@ def register_blueprints():
 
 register_blueprints()
 
-client = pymongo.MongoClient(app.config['MONGODB_HOST'], app.config['MONGODB_PORT'])
+client = pymongo.MongoReplicaSetClient(app.config['MONGODB_URL'], replicaSet=app.config['SET'])
 db = client[app.config['DATABASE']]
 db.authenticate(app.config['USERNAME'], app.config['PASSWORD'])
