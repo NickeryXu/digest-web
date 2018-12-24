@@ -1,7 +1,7 @@
 from flask import session, make_response
-from elasticsearch import Elasticsearch
 from functools import wraps
 from datetime import datetime
+from app import es
 
 def sign_check():
     def sign_decorator(f):
@@ -26,10 +26,10 @@ def raise_status(status, result):
     resp.response = result
     return resp
 
-def es_insert(index, eid, data):
-    es = Elasticsearch(['47.110.77.43:9200'])
-    es.index(index=index, doc_type='digest', id=eid, body=data)
+def es_bulk(index, data):
+    es.indices.create(index='t_books', ignore=400)
+    es.indices.create(index='t_excerpts', ignore=400)
+    es.bulk(index=index, doc_type='digest', body=data, request_timeout=60)
 
 def es_delete(index, eid):
-    es = Elasticsearch(['47.110.77.43:9200'])
     es.delete(index=index, doc_type='digest', id=eid)

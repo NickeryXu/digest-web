@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
-from auth import sign_check, raise_status, es_delete, es_insert
+from auth import sign_check, raise_status, es_delete, es_bulk
 from datetime import datetime
 
 digest = Blueprint('digest', __name__)
@@ -188,9 +188,11 @@ def excerpt_operation():
     from app import db
     returnObj = {}
     try:
+        key_status = 0
         list = request.json.get('list')
         action = request.args.get('action')
         if action == 'up':
+            excerpt_doc = []
             for excerpt_id in list:
                 data_excerpt = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
                 data_check = db.t_books.find_one({'_id': ObjectId(data_excerpt['bookid'])})
@@ -198,11 +200,14 @@ def excerpt_operation():
                     operation = {session['id']: [session['username'], 'up', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                     db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                     db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '1'}})
-                    del data_check['_id']
-                    es_insert('t_excerpts', excerpt_id, data_check)
+                    del data_excerpt['_id']
+                    doc = {'index': {'_index': 't_books', '_type': 'digest', '_id': excerpt_id}}
+                    excerpt_doc.append(doc)
+                    excerpt_doc.append(data_excerpt)
                 else:
                     info = '有书籍未上架'
-                    return raise_status(400, info)
+                    key_status = 1
+            es_bulk('t_excerpts', excerpt_doc)
         elif action == 'down':
             for excerpt_id in list:
                 operation = {session['id']: [session['username'], 'down', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
@@ -233,20 +238,22 @@ def excerpt_operation():
         elif action == 'recommend':
             for excerpt_id in list:
                 data_check = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
-                if data_check['shelf_status'] == '1':
+                if data_check.get('shelf_status') == '1':
                     operation = {session['id']: [session['username'], 'recommend',\
                                                  datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                     db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                     db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'recommend_status': '1'}})
                 else:
                     info = '有未上架书摘'
-                    return raise_status(400, info)
+                    key_status = 1
         elif action == 'deprecated':
             for excerpt_id in list:
                 operation = {session['id']: [session['username'], 'deprecated',\
                                              datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'recommend_status': '0'}})
+        if key_status == 1:
+            raise_status(400, info)
         returnObj['info'] = '操作成功'
         return jsonify(returnObj)
     except Exception as e:

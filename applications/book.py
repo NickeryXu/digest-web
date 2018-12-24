@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
-from auth import sign_check, raise_status, es_delete, es_insert
+from auth import sign_check, raise_status, es_delete, es_bulk
 from datetime import datetime
 
 book = Blueprint('excerpt', __name__)
@@ -90,8 +90,8 @@ def book_search():
         start = int(request.args.get('start', '0'))
         end = int(request.args.get('end', '30'))
         length = end - start
-        count_book = 8000000
-        # count_book = db.t_books.find(data_search).count()
+        # count_book = 8000000
+        count_book = db.t_books.find(data_search).count()
         books = db.t_books.find(data_search).limit(length).skip(start).sort([('score', -1)])
         data_list = []
         for data in books:
@@ -99,9 +99,12 @@ def book_search():
             dataObj['book_id'] = str(data['_id'])
             dataObj['book_name'] = data['book_name']
             dataObj['author_list'] = []
+            # dataObj['author_list'] = data['author_list']
             for author in data['author_list']:
                 dataObj['author_list'].append(author['author_name'])
-            dataObj['category'] = data['category']
+            dataObj['category'] = []
+            for cate in data['category']:
+                dataObj['category'].append((cate['name']))
             dataObj['catalog_info'] = data['catalog_info']
             dataObj['tags'] = data['tags']
             dataObj['summary'] = data['summary']
@@ -110,9 +113,12 @@ def book_search():
             dataObj['publish_info'] = data['publish_info']
             dataObj['ck_book_name'] = data.get('ck_book_name', data['book_name'])
             dataObj['ck_author_list'] = []
+            # dataObj['ck_author_list'] = data.get('ck_author_list', data['author_list'])
             for author in data.get('ck_author_list', data['author_list']):
                 dataObj['ck_author_list'].append(author['author_name'])
-            dataObj['ck_category'] = data.get('ck_category', data['category'])
+            dataObj['ck_category'] = []
+            for ck_cate in data.get('ck_category', data['category']):
+                dataObj['ck_category'].append(ck_cate['name'])
             dataObj['ck_catalog_info'] = data.get('ck_catalog_info', data['catalog_info'])
             dataObj['ck_tags'] = data.get('ck_tags', data['tags'])
             dataObj['ck_summary'] = data.get('ck_summary', data['summary'])
@@ -146,7 +152,10 @@ def book_update():
             ck_author_list = []
             for author in author_list:
                 ck_author_list.append({'id': 1000000, 'author_name': author})
-            ck_category = data_book.get('ck_category')
+            category_list = data_book.get('ck_category')
+            ck_category_list = []
+            for category in category_list:
+                ck_category_list.append({'id': 100, 'name': category})
             ck_catalog_info = data_book.get('ck_catalog_info')
             ck_tags = data_book.get('ck_tags')
             ck_summary = data_book.get('ck_summary')
@@ -160,7 +169,7 @@ def book_update():
             data_update = {}
             data_update['ck_book_name'] = ck_book_name
             data_update['ck_author_list'] = ck_author_list
-            data_update['ck_category'] = ck_category
+            data_update['ck_category'] = ck_category_list
             data_update['ck_catalog_info'] = ck_catalog_info
             data_update['ck_tags'] = ck_tags
             data_update['ck_summary'] = ck_summary
@@ -192,14 +201,14 @@ def book_insert():
         all_version = request.json.get('all_version')
         summary = request.json.get('summary')
         original_name = request.json.get('original_name')
-        category = request.json.get('category')
+        category_list = request.json.get('category')
         cover_thumbnail = request.json.get('cover_thumbnail')
         publish_info = request.json.get('publish_info')
         catalog_info = request.json.get('catalog_info')
         series = request.json.get('series')
         book_name = request.json.get('book_name')
         if not tags or not score or not author_list or not summary\
-                or not category or not publish_info or not catalog_info or not book_name:
+                or not category_list or not publish_info or not catalog_info or not book_name:
             info = '有未填信息'
             return raise_status(400, info)
         dataObj = {}
@@ -221,7 +230,11 @@ def book_insert():
         if not original_name:
             original_name = ''
         dataObj['original_name'] = original_name
-        dataObj['category'] = category
+        list = []
+        for category in category_list:
+            simple = {'id': 100, 'name': category}
+            list.append(simple)
+        dataObj['category'] = list
         if not cover_thumbnail:
             cover_thumbnail = "http://wfqqreader-1252317822.image.myqcloud.com/cover/873/21031873/s_21031873.jpg"
         dataObj['cover_thumbnail'] = cover_thumbnail
@@ -252,13 +265,17 @@ def book_operation():
         list = request.json.get('list')
         action = request.args.get('action')
         if action == 'up':
+            book_doc = []
             for book_id in list:
                 operation = {session['id']: [session['username'], 'up', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'shelf_status': '1'}})
                 data_insert = db.t_books.find_one({'_id': ObjectId(book_id)})
                 del data_insert['_id']
-                es_insert('t_books', book_id, data_insert)
+                doc = {'index': {'_index': 't_books', '_type': 'digest', '_id': book_id}}
+                book_doc.append(doc)
+                book_doc.append(data_insert)
+            es_bulk('t_books', book_doc)
         elif action == 'down':
             for book_id in list:
                 operation = {session['id']: [session['username'], 'down', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
