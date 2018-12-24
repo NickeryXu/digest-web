@@ -3,7 +3,7 @@ from bson import ObjectId
 from auth import sign_check, raise_status, es_delete, es_bulk
 from datetime import datetime
 
-book = Blueprint('excerpt', __name__)
+book = Blueprint('excerpt', __name__, url_prefix='/dg')
 
 # 书籍查询
 @book.route('/book/search', methods=['POST'])

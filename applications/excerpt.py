@@ -3,7 +3,7 @@ from bson import ObjectId
 from auth import sign_check, raise_status, es_delete, es_bulk
 from datetime import datetime
 
-digest = Blueprint('digest', __name__)
+digest = Blueprint('digest', __name__, url_prefix='/dg')
 
 # 书摘查询
 @digest.route('/excerpt/search', methods=['POST'])
