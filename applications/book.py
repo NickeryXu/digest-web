@@ -352,13 +352,21 @@ def book_image(book_id):
     returnObj = {}
     try:
         type = request.args.get('type')
+        allowed_extensions = set(['png', 'jpg', 'JPG', 'PNG', 'gif', 'GIF'])
         file = request.files.get('file')
-        message = img_bulk(file)
-        # path = './img/'
-        # img_name = path + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + file.filename
-        # file.save(img_name)
-        a = 1
-        return ''
+        extension = file.filename.rsplit('.', 1)[1]
+        if extension in allowed_extensions:
+            message = img_bulk(file, extension)
+            if type == '0':
+                db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'ck_cover_thumbnail': message}})
+                returnObj['info'] = '操作成功'
+            elif type == '1':
+                db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'cover_thumbnail': message}})
+                returnObj['info'] = '操作成功'
+        else:
+            info = '图片格式不对'
+            return raise_status(400, info)
+        return jsonify(returnObj)
     except Exception as e:
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_image error as: ', e)
         raise_status(500, str(e))

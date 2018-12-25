@@ -35,7 +35,8 @@ def es_bulk(index, data):
 def es_delete(index, eid):
     es.delete(index=index, doc_type='digest', id=eid)
 
-def img_bulk(file):
-    current = file.tell()
-    bucket.put_object('t_books_imgs/mz' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + '.png', file)
-    return current
+def img_bulk(file, extension):
+    filename = 'mz' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + '.' + extension
+    message = 'https://joymiaozhai.oss-cn-hangzhou.aliyuncs.com/t_books_imgs/' + filename
+    bucket.put_object('t_books_imgs/' + filename + '.png', file)
+    return message
