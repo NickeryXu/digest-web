@@ -1,7 +1,8 @@
 from flask import session, make_response
 from functools import wraps
 from datetime import datetime
-from app import es
+from app import es, bucket
+import oss2
 
 def sign_check():
     def sign_decorator(f):
@@ -33,3 +34,8 @@ def es_bulk(index, data):
 
 def es_delete(index, eid):
     es.delete(index=index, doc_type='digest', id=eid)
+
+def img_bulk(file):
+    current = file.tell()
+    bucket.put_object('t_books_imgs/mz' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + '.png', file)
+    return current

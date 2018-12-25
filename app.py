@@ -4,6 +4,7 @@ from elasticsearch import Elasticsearch
 from datetime import timedelta
 import pymongo
 import config
+import oss2
 
 app = Flask('digest')
 app.config.from_object(config)
@@ -14,6 +15,8 @@ client = pymongo.MongoReplicaSetClient(app.config['MONGODB_URL'], replicaSet=app
 db = client[app.config['DATABASE']]
 db.authenticate(app.config['USERNAME'], app.config['PASSWORD'])
 es = Elasticsearch(['es-cn-0pp0wdtno00026tz5.public.elasticsearch.aliyuncs.com'], http_auth=('elastic', 'N+8atre&lt'), port=9200)
+auth = oss2.Auth(app.config['OSS_USERNAME'], app.config['OSS_PASSWORD'])
+bucket = oss2.Bucket(auth, app.config['OSS_ENDPOINT'], app.config['OSS_BUCKETNAME'])
 
 def register_blueprints():
     from applications.user import user

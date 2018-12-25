@@ -1,9 +1,9 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
-from auth import sign_check, raise_status, es_delete, es_bulk
+from auth import sign_check, raise_status, es_delete, es_bulk, img_bulk
 from datetime import datetime
 
-book = Blueprint('excerpt', __name__, url_prefix='/dg')
+book = Blueprint('excerpt', __name__,)
 
 # 书籍查询
 @book.route('/book/search', methods=['POST'])
@@ -349,9 +349,13 @@ def book_image(book_id):
     from app import db
     returnObj = {}
     try:
-        while True:
-            type = request.args.get('type')
-            file = request.files.get('file')
+        type = request.args.get('type')
+        file = request.files.get('file')
+        message = img_bulk(file)
+        # path = './img/'
+        # img_name = path + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + file.filename
+        # file.save(img_name)
+        a = 1
         return ''
     except Exception as e:
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_image error as: ', e)

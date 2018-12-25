@@ -3,7 +3,7 @@ from bson import ObjectId
 from auth import sign_check, raise_status, es_delete, es_bulk
 from datetime import datetime
 
-digest = Blueprint('digest', __name__, url_prefix='/dg')
+digest = Blueprint('digest', __name__)
 
 # 书摘查询
 @digest.route('/excerpt/search', methods=['POST'])
@@ -207,7 +207,8 @@ def excerpt_operation():
                 else:
                     info = '有书籍未上架'
                     key_status = 1
-            es_bulk('t_excerpts', excerpt_doc)
+            if key_status == 0:
+                es_bulk('t_excerpts', excerpt_doc)
         elif action == 'down':
             for excerpt_id in list:
                 operation = {session['id']: [session['username'], 'down', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
@@ -253,7 +254,7 @@ def excerpt_operation():
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'recommend_status': '0'}})
         if key_status == 1:
-            raise_status(400, info)
+            return raise_status(400, info)
         returnObj['info'] = '操作成功'
         return jsonify(returnObj)
     except Exception as e:
