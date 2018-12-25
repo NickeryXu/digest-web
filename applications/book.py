@@ -81,6 +81,8 @@ def book_search():
                 change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}]}
                 data_search['$and'].append(change)
                 # data_search['$or'] = [{'change_status': '0'}, {'change_status': {'$exists': 0}}]
+            elif change_status == '2':
+                data_search['change_status'] = change_status
             elif change_status == '11':
                 change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}, {'change_status': '1'}]}
                 data_search['$and'].append(change)
