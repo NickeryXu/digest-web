@@ -197,6 +197,10 @@ def excerpt_operation():
             excerpt_doc = []
             for excerpt_id in list:
                 data_excerpt = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
+                if data_excerpt.get('shelf_status') == '1':
+                    info = '有书摘已上架'
+                    key_status = 1
+                    continue
                 data_check = db.t_books.find_one({'_id': ObjectId(data_excerpt['bookid'])})
                 if data_check.get('shelf_status') == '1':
                     operation = {session['id']: [session['username'], 'up', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
@@ -211,6 +215,9 @@ def excerpt_operation():
                     key_status = 1
             if key_status == 0:
                 es_bulk('t_excerpts', excerpt_doc)
+            elif excerpt_doc == []:
+                info = '书摘均已上架或有书籍未上架'
+                return raise_status(400, info)
         elif action == 'down':
             for excerpt_id in list:
                 operation = {session['id']: [session['username'], 'down', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}

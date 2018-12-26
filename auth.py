@@ -1,7 +1,7 @@
 from flask import session, make_response
 from functools import wraps
 from datetime import datetime
-from app import es, bucket
+from app import es, bucket, rd
 import oss2
 
 def sign_check():
@@ -40,3 +40,8 @@ def img_bulk(file, extension):
     message = 'https://joymiaozhai.oss-cn-hangzhou.aliyuncs.com/t_books_imgs/' + filename
     bucket.put_object('t_books_imgs/' + filename + '.png', file)
     return message
+
+def redis_zincrby(category, amount):
+    for single in category:
+        name = single['name']
+        rd.zincrby('book_category', amount, name)

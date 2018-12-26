@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
-from auth import sign_check, raise_status, es_delete, es_bulk, img_bulk
+from auth import sign_check, raise_status, es_delete, es_bulk, img_bulk, redis_zincrby
 from datetime import datetime
 
 book = Blueprint('excerpt', __name__,)
@@ -266,19 +266,32 @@ def book_operation():
     try:
         list = request.json.get('list')
         action = request.args.get('action')
+        key_status = 0
         if action == 'up':
             book_doc = []
+            category_list = []
             for book_id in list:
+                data_insert = db.t_books.find_one({'_id': ObjectId(book_id)})
+                if data_insert.get('shelf_status') == '1':
+                    info = '已有上架书籍'
+                    key_status = 1
+                    continue
                 operation = {session['id']: [session['username'], 'up', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'shelf_status': '1'}})
-                data_insert = db.t_books.find_one({'_id': ObjectId(book_id)})
                 del data_insert['_id']
                 doc = {'index': {'_index': 't_books', '_type': 'digest', '_id': book_id}}
                 book_doc.append(doc)
                 book_doc.append(data_insert)
+                for single in data_insert['category']:
+                    category_list.append(single)
+            if book_doc == []:
+                info = '书籍均已上架'
+                return raise_status(400, info)
             es_bulk('t_books', book_doc)
+            redis_zincrby(category_list, 1)
         elif action == 'down':
+            category_list = []
             for book_id in list:
                 operation = {session['id']: [session['username'], 'down', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
@@ -289,6 +302,10 @@ def book_operation():
                 db.t_excerpts.update({'bookid': book_id}, {'$set': {'shelf_status': '0',
                                                                  'change_status': '0', 'check_status': '0'}})
                 es_delete('t_books', book_id)
+                data_down = db.t_books.find_one({'_id': ObjectId(book_id)})
+                for single in data_down['category']:
+                    category_list.append(single)
+            redis_zincrby(category_list, -1)
         elif action == 'pass':
             for book_id in list:
                 operation = {session['id']: [session['username'], 'pass', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
@@ -323,6 +340,8 @@ def book_operation():
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'check_status': '0', 'change_status': '0'}})
         returnObj['info'] = '操作成功'
+        if key_status == 1:
+            return raise_status(400, info)
         return jsonify(returnObj)
     except Exception as e:
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_operation error as: ', e)

@@ -3,6 +3,7 @@ from flask_cors import *
 from elasticsearch import Elasticsearch
 from datetime import timedelta
 import pymongo
+import redis
 import config
 import oss2
 
@@ -17,6 +18,7 @@ db.authenticate(app.config['USERNAME'], app.config['PASSWORD'])
 es = Elasticsearch(['es-cn-0pp0wdtno00026tz5.public.elasticsearch.aliyuncs.com'], http_auth=('elastic', 'N+8atre&lt'), port=9200)
 auth = oss2.Auth(app.config['OSS_USERNAME'], app.config['OSS_PASSWORD'])
 bucket = oss2.Bucket(auth, app.config['OSS_ENDPOINT'], app.config['OSS_BUCKETNAME'])
+rd = redis.Redis(host=app.config['REDIS_HOST'], port=app.config['REDIS_PORT'], db=0)
 
 def register_blueprints():
     from applications.user import user
