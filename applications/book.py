@@ -301,7 +301,11 @@ def book_operation():
                 db.t_excerpts.update({'bookid': book_id}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'bookid': book_id}, {'$set': {'shelf_status': '0',
                                                                  'change_status': '0', 'check_status': '0'}})
-                es_delete('t_books', book_id)
+                try:
+                    es_delete('t_books', book_id)
+                except Exception as e:
+                    info = '有书籍存在异常，请重新点击查询'
+                    key_status = 1
                 data_down = db.t_books.find_one({'_id': ObjectId(book_id)})
                 for single in data_down['category']:
                     category_list.append(single)

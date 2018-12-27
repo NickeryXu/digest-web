@@ -224,7 +224,11 @@ def excerpt_operation():
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '0',\
                                                                               'check_status': '0', 'change_status': '0'}})
-                es_delete('t_excerpts', excerpt_id)
+                try:
+                    es_delete('t_excerpts', excerpt_id)
+                except Exception as e:
+                    info = '有书摘存在异常，请重新点击查询'
+                    key_status = 1
         elif action == 'pass':
             for excerpt_id in list:
                 operation = {session['id']: [session['username'], 'pass', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
