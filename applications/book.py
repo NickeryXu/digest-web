@@ -57,7 +57,8 @@ def book_search():
         if summary:
             data_search['summary'] = {'$regex': summary}
         if category:
-            data_search['category.name'] = {'$all': category}
+            category_list = category.split(',')
+            data_search['category.name'] = {'$all': category_list}
         if catalog_info:
             data_search['catalog_info'] = {'$all': catalog_info}
         if shelf_status or change_status or check_status:
@@ -130,6 +131,9 @@ def book_search():
             dataObj['check_status'] = data.get('check_status', '0')
             dataObj['shelf_status'] = data.get('shelf_status', '0')
             dataObj['change_status'] = data.get('change_status', '0')
+            digest_ck = data.get('digest_ck', ['-', '-'])
+            ck_count = str(digest_ck[0]) + '/' + str(digest_ck[1])
+            dataObj['digest_ck'] = ck_count
             data_list.append(dataObj)
         returnObj['data'] = data_list
         returnObj['count'] = count_book
@@ -374,17 +378,16 @@ def book_image(book_id):
     from app import db
     returnObj = {}
     try:
-        type = request.args.get('type')
+        # type = request.args.get('type')
         allowed_extensions = set(['png', 'jpg', 'JPG', 'PNG', 'gif', 'GIF'])
         file = request.files.get('file')
         extension = file.filename.rsplit('.', 1)[1]
         if extension in allowed_extensions:
             message = img_bulk(file, extension)
-            if type == '0':
+            if book_id == 'insert':
+                session['img_url'] = message
+            else:
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'ck_cover_thumbnail': message}})
-                returnObj['info'] = '操作成功'
-            elif type == '1':
-                db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'cover_thumbnail': message}})
                 returnObj['info'] = '操作成功'
         else:
             info = '图片格式不对'

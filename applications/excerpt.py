@@ -125,6 +125,17 @@ def excerpt_update():
             }})
             operation = {session['id']: [session['username'], 'update', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
             db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
+            summary = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
+            book_id = summary['bookid']
+            data_count = db.t_books.find_one({'_id': ObjectId(book_id)})
+            if data_count.get('digest_ck'):
+                digest_ck = data_count['digest_ck']
+                digest_ck[0] = digest_ck[0] - 1
+            else:
+                digest_count = db.t_excerpts.count({'bookid': book_id})
+                ck_count = db.t_excerpts.count({'bookid': book_id, 'change_status': '1'})
+                digest_ck = [ck_count, digest_count]
+            db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'digest_ck': digest_ck}})
             # data['ck_exp_chp_id'] = ck_exp_chp_id
             # data['ck_exp_chp_title'] = ck_exp_chp_title
             # data['ck_exp_text'] = ck_exp_text
