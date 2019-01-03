@@ -134,7 +134,7 @@ def excerpt_update():
             else:
                 digest_count = db.t_excerpts.count({'bookid': book_id})
                 ck_count = db.t_excerpts.count({'bookid': book_id, 'change_status': '1'})
-                digest_ck = [ck_count, digest_count]
+                digest_ck = [digest_count - ck_count, digest_count]
             db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'digest_ck': digest_ck}})
             # data['ck_exp_chp_id'] = ck_exp_chp_id
             # data['ck_exp_chp_title'] = ck_exp_chp_title
