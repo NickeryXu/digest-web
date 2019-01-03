@@ -293,7 +293,7 @@ def book_operation():
                 book_doc.append(doc)
                 book_doc.append(data_insert)
                 for single in data_insert['category']:
-                    category_list.append(single.get('name'))
+                    category_list.append(single)
             if book_doc == []:
                 info = '书籍均已上架'
                 return raise_status(400, info)
@@ -317,7 +317,7 @@ def book_operation():
                     key_status = 1
                 data_down = db.t_books.find_one({'_id': ObjectId(book_id)})
                 for single in data_down['category']:
-                    category_list.append(single.get('name'))
+                    category_list.append(single)
             redis_zincrby(category_list, -1)
         elif action == 'pass':
             for book_id in list:
