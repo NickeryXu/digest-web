@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from bson import ObjectId
-from auth import sign_check, raise_status, es_delete, es_bulk
+from auth import sign_check, raise_status, es_delete, es_bulk, redis_zincrby
 from datetime import datetime
 
 digest = Blueprint('digest', __name__)
@@ -221,6 +221,11 @@ def excerpt_operation():
                     doc = {'index': {'_index': 't_books', '_type': 'digest', '_id': excerpt_id}}
                     excerpt_doc.append(doc)
                     excerpt_doc.append(data_excerpt)
+                    # 书摘上架将书籍的category加入redis
+                    category_list = []
+                    for single in data_check['category']:
+                        category_list.append(single.get('name'))
+                    redis_zincrby(category_list, 1)
                 else:
                     info = '有书籍未上架'
                     key_status = 1
@@ -235,6 +240,13 @@ def excerpt_operation():
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '0',\
                                                                               'check_status': '0', 'change_status': '0'}})
+                dg = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
+                book = db.t_books.find_one({'_id': ObjectId(dg['bookid'])})
+                # 书摘下架将书籍的category从redis中-1
+                category_list = []
+                for single in book['category']:
+                    category_list.append(single.get('name'))
+                redis_zincrby(category_list, -1)
                 try:
                     es_delete('t_excerpts', excerpt_id)
                 except Exception as e:

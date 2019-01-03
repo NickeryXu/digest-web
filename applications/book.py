@@ -23,6 +23,7 @@ def book_search():
         shelf_status = request.json.get('shelf_status')
         check_status = request.json.get('check_status')
         change_status = request.json.get('change_status')
+        digest_status = request.json.get('digest_ck')
         data_search = {}
         if publish_info:
             publish_date = publish_info.get('publish_date')
@@ -61,6 +62,10 @@ def book_search():
             data_search['category.name'] = {'$all': category_list}
         if catalog_info:
             data_search['catalog_info'] = {'$all': catalog_info}
+        if digest_status == '0':
+            data_search['digest_ck.0'] = 0
+        elif digest_status == '1':
+            data_search['digest_ck.0'] = {'$gt': 0}
         if shelf_status or change_status or check_status:
             if shelf_status == '0' or check_status == '0' or change_status == '0':
                 data_search['$and'] = []
@@ -94,7 +99,7 @@ def book_search():
         end = int(request.args.get('end', '30'))
         length = end - start
         # count_book = 8000000
-        count_book = db.t_books.find(data_search).count()
+        count_book = db.t_books.count(data_search)
         books = db.t_books.find(data_search).limit(length).skip(start).sort([('score', -1)])
         data_list = []
         for data in books:
@@ -288,7 +293,7 @@ def book_operation():
                 book_doc.append(doc)
                 book_doc.append(data_insert)
                 for single in data_insert['category']:
-                    category_list.append(single)
+                    category_list.append(single.get('name'))
             if book_doc == []:
                 info = '书籍均已上架'
                 return raise_status(400, info)
@@ -312,7 +317,7 @@ def book_operation():
                     key_status = 1
                 data_down = db.t_books.find_one({'_id': ObjectId(book_id)})
                 for single in data_down['category']:
-                    category_list.append(single)
+                    category_list.append(single.get('name'))
             redis_zincrby(category_list, -1)
         elif action == 'pass':
             for book_id in list:
