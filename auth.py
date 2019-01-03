@@ -43,5 +43,5 @@ def img_bulk(file, extension):
 
 def redis_zincrby(category, amount):
     for single in category:
-        name = single['name']
+        name = single.get('name')
         rd.zincrby('book_category', amount, name)

@@ -222,10 +222,7 @@ def excerpt_operation():
                     excerpt_doc.append(doc)
                     excerpt_doc.append(data_excerpt)
                     # 书摘上架将书籍的category加入redis
-                    category_list = []
-                    for single in data_check['category']:
-                        category_list.append(single.get('name'))
-                    redis_zincrby(category_list, 1)
+                    redis_zincrby(data_check['category'], 1)
                 else:
                     info = '有书籍未上架'
                     key_status = 1
@@ -243,10 +240,7 @@ def excerpt_operation():
                 dg = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
                 book = db.t_books.find_one({'_id': ObjectId(dg['bookid'])})
                 # 书摘下架将书籍的category从redis中-1
-                category_list = []
-                for single in book['category']:
-                    category_list.append(single.get('name'))
-                redis_zincrby(category_list, -1)
+                redis_zincrby(book['category'], -1)
                 try:
                     es_delete('t_excerpts', excerpt_id)
                 except Exception as e:
