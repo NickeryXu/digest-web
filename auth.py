@@ -28,8 +28,7 @@ def raise_status(status, result):
     return resp
 
 def es_bulk(index, data):
-    es.indices.create(index='t_books', ignore=400)
-    es.indices.create(index='t_excerpts', ignore=400)
+    es.indices.create(index=index, ignore=400)
     es.bulk(index=index, doc_type='digest', body=data, request_timeout=60)
 
 def es_delete(index, eid):

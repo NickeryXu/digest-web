@@ -218,7 +218,7 @@ def excerpt_operation():
                     db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                     db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '1'}})
                     del data_excerpt['_id']
-                    doc = {'index': {'_index': 't_books', '_type': 'digest', '_id': excerpt_id}}
+                    doc = {'index': {'_index': 't_excerpts', '_type': 'digest', '_id': excerpt_id}}
                     excerpt_doc.append(doc)
                     excerpt_doc.append(data_excerpt)
                     # 书摘上架将书籍的category加入redis
@@ -233,17 +233,21 @@ def excerpt_operation():
                 return raise_status(400, info)
         elif action == 'down':
             for excerpt_id in list:
+                dg = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
+                book = db.t_books.find_one({'_id': ObjectId(dg['bookid'])})
+                digest_ck = [book['digest_ck'][0] + 1, book['digest_ck'][1]]
                 operation = {session['id']: [session['username'], 'down', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '0',\
-                                                                              'check_status': '0', 'change_status': '0'}})
-                dg = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
-                book = db.t_books.find_one({'_id': ObjectId(dg['bookid'])})
+                                                                              'check_status': '0',\
+                                                                              'change_status': '0'}})
+                db.t_books.update({'_id': ObjectId(dg['bookid'])}, {'$set': {'digest_ck': digest_ck}})
                 # 书摘下架将书籍的category从redis中-1
                 redis_zincrby(book['category'], -1)
                 try:
                     es_delete('t_excerpts', excerpt_id)
                 except Exception as e:
+                    print(e)
                     info = '有书摘存在异常，请重新点击查询'
                     key_status = 1
         elif action == 'pass':
@@ -263,9 +267,14 @@ def excerpt_operation():
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, data)
         elif action == 'refuse':
             for excerpt_id in list:
+                dg = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
+                book = db.t_books.find_one({'_id': ObjectId(dg['bookid'])})
+                digest_ck = [book['digest_ck'][0] + 1, book['digest_ck'][1]]
                 operation = {session['id']: [session['username'], 'refuse', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
-                db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'check_status': '0', 'change_status': '0'}})
+                db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'check_status': '0', 'change_status': '0',\
+                                                                              'digest_ck': digest_ck}})
+                db.t_books.update({'_id': ObjectId(dg['bookid'])}, {'$set': {'digest_ck': digest_ck}})
         elif action == 'recommend':
             for excerpt_id in list:
                 data_check = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
