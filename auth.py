@@ -2,7 +2,6 @@ from flask import session, make_response
 from functools import wraps
 from datetime import datetime
 from app import es, bucket, rd
-import oss2
 
 def sign_check():
     def sign_decorator(f):
@@ -37,7 +36,7 @@ def es_delete(index, eid):
 def img_bulk(file, extension):
     filename = 'mz' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + '.' + extension
     message = 'https://joymiaozhai.oss-cn-hangzhou.aliyuncs.com/t_books_imgs/' + filename
-    bucket.put_object('t_books_imgs/' + filename + '.png', file)
+    bucket.put_object('t_books_imgs/' + filename, file)
     return message
 
 def redis_zincrby(category, amount):

@@ -170,7 +170,7 @@ def book_update():
             ck_catalog_info = data_book.get('ck_catalog_info')
             ck_tags = data_book.get('ck_tags')
             ck_summary = data_book.get('ck_summary')
-            ck_cover_thumbnail = data_book.get('ck_cover_thumbnail')
+            ck_cover_thumbnail = session.get(book_id)
             ck_score = data_book.get('ck_score')
             ck_publish_info = data_book.get('ck_publish_info')
             # if not ck_book_name and not ck_author_list and not ck_category and not ck_catalog_info and not ck_tags\
@@ -213,7 +213,7 @@ def book_insert():
         summary = request.json.get('summary')
         original_name = request.json.get('original_name')
         category_list = request.json.get('category')
-        cover_thumbnail = request.json.get('cover_thumbnail')
+        cover_thumbnail = session.get('insert')
         publish_info = request.json.get('publish_info')
         catalog_info = request.json.get('catalog_info')
         series = request.json.get('series')
@@ -378,21 +378,25 @@ def book_delete():
 
 # 书籍封面
 @book.route('/book/image/<book_id>', methods=['POST'])
-# @sign_check()
+@sign_check()
 def book_image(book_id):
     from app import db
     returnObj = {}
     try:
-        # type = request.args.get('type')
+        type = request.args.get('type')
         allowed_extensions = set(['png', 'jpg', 'JPG', 'PNG', 'gif', 'GIF'])
-        file = request.files.get('file')
+        file = request.files.get('avatar')
         extension = file.filename.rsplit('.', 1)[1]
         if extension in allowed_extensions:
             message = img_bulk(file, extension)
-            if book_id == 'insert':
-                session['img_url'] = message
-            else:
-                db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'ck_cover_thumbnail': message}})
+            print(message)
+            if type == '0':
+                session['insert'] = message
+                returnObj['message'] = message
+                returnObj['info'] = '操作成功'
+            elif type == '1':
+                session[book_id] = message
+                returnObj['message'] = message
                 returnObj['info'] = '操作成功'
         else:
             info = '图片格式不对'
