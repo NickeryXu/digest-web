@@ -45,13 +45,13 @@ def signup():
 @user.route('/user/role_list', methods=['GET'])
 def role_list():
     list = [
-        {'id': '101', 'name': '书摘列表', 'path': '/excerpt/search'},
-        {'id': '102', 'name': '书摘录入', 'path': '/excerpt/add'},
+        {'id': '101', 'name': '书摘录入', 'path': '/excerpt/add'},
+        {'id': '102', 'name': '书摘校验', 'path': '/excerpt/search'},
         {'id': '103', 'name': '书摘审核', 'path': '/excerpt/check'},
         {'id': '104', 'name': '书摘上架', 'path': '/excerpt/manage'},
         {'id': '105', 'name': '书摘查询', 'path': '/excerpt/query'},
-        {'id': '201', 'name': '书籍列表', 'path': '/book/search'},
-        {'id': '202', 'name': '书籍录入', 'path': '/book/add'},
+        {'id': '201', 'name': '书籍录入', 'path': '/book/add'},
+        {'id': '202', 'name': '书籍校验', 'path': '/book/search'},
         {'id': '203', 'name': '书籍审核', 'path': '/book/check'},
         {'id': '204', 'name': '书籍上架', 'path': '/book/manage'},
         {'id': '205', 'name': '书籍查询', 'path': '/book/query'},

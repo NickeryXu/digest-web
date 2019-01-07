@@ -71,7 +71,7 @@ def excerpt_search():
         end = int(request.args.get('end', '30'))
         length = end - start
         count_excerpt = db.t_excerpts.find(data_search).count()
-        data = db.t_excerpts.find(data_search).limit(length).skip(start)
+        data = db.t_excerpts.find(data_search).limit(length).skip(start).sort([('book_name', 1), ('exp_text', 1)])
         dataObj = []
         # 查询出的文档可能没有ck字段，即没有修改内容，所以采用get方法，修改内容取原始内容
         for digest in data:
@@ -248,7 +248,7 @@ def excerpt_operation():
                     es_delete('t_excerpts', excerpt_id)
                 except Exception as e:
                     print(e)
-                    info = '有书摘存在异常，请重新点击查询'
+                    info = '有书摘已下架或不存在，请重新点击查询'
                     key_status = 1
         elif action == 'pass':
             for excerpt_id in list:
