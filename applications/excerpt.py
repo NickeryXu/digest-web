@@ -57,7 +57,7 @@ def excerpt_search():
             elif change_status == '2':
                 data_search['change_status'] = change_status
             elif change_status == '11':
-                change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}, {'change_status': '1'}]}
+                change = {'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}]}
                 data_search['$and'].append(change)
             elif change_status == '12':
                 change = {'$or': [{'change_status': '1'}, {'change_status': '2'}]}
@@ -257,6 +257,9 @@ def excerpt_operation():
                 # data['exp_chp_id'] = data['ck_exp_chp_id']
                 # data['exp_chp_title'] = data['ck_exp_chp_title']
                 if data.get('change_status') == '2':
+                    data_book = db.t_books.find_one({'_id': ObjectId(data['bookid'])})
+                    digest_ck = [data_book['digest_ck'][0] - 1, data_book['digest_ck'][1] - 1]
+                    db.t_books.update_one({'_id': ObjectId(data['bookid'])}, {'$set': {'digest_ck': digest_ck}})
                     db.t_excerpts.remove({'_id': ObjectId(excerpt_id)})
                 if data.get('ck_exp_text'):
                     data['exp_text'] = data['ck_exp_text']
