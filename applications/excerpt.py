@@ -258,8 +258,9 @@ def excerpt_operation():
                 # data['exp_chp_title'] = data['ck_exp_chp_title']
                 if data.get('change_status') == '2':
                     data_book = db.t_books.find_one({'_id': ObjectId(data['bookid'])})
-                    digest_ck = [data_book['digest_ck'][0] - 1, data_book['digest_ck'][1] - 1]
-                    db.t_books.update_one({'_id': ObjectId(data['bookid'])}, {'$set': {'digest_ck': digest_ck}})
+                    if data_book.get('digest_ck'):
+                        digest_ck = [data_book['digest_ck'][0] - 1, data_book['digest_ck'][1] - 1]
+                        db.t_books.update_one({'_id': ObjectId(data['bookid'])}, {'$set': {'digest_ck': digest_ck}})
                     db.t_excerpts.remove({'_id': ObjectId(excerpt_id)})
                 if data.get('ck_exp_text'):
                     data['exp_text'] = data['ck_exp_text']
