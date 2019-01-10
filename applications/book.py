@@ -219,7 +219,7 @@ def book_insert():
         series = request.json.get('series')
         book_name = request.json.get('book_name')
         if not tags or not score or not author_list or not summary\
-                or not category_list or not publish_info or not catalog_info or not book_name:
+                or not category_list or not publish_info or not catalog_info or not book_name or not cover_thumbnail:
             info = '有未填信息'
             return raise_status(400, info)
         dataObj = {}
