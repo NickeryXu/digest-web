@@ -307,9 +307,9 @@ def book_operation():
                 db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'shelf_status': '0',
                                                                         'change_status': '0', 'check_status': '0'}})
                 # 书籍下架时，书籍下的书摘也都下架，下架后修改状态为未修改、审核状态为未审核
-                db.t_excerpts.update({'bookid': book_id}, {'$push': {'operation': operation}})
-                db.t_excerpts.update({'bookid': book_id}, {'$set': {'shelf_status': '0',
-                                                                 'change_status': '0', 'check_status': '0'}})
+                # db.t_excerpts.update({'bookid': book_id}, {'$push': {'operation': operation}})
+                # db.t_excerpts.update({'bookid': book_id}, {'$set': {'shelf_status': '0',
+                #                                                  'change_status': '0', 'check_status': '0'}})
                 try:
                     es_delete('t_books', book_id)
                 except Exception as e:
