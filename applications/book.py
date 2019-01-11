@@ -95,11 +95,27 @@ def book_search():
             elif change_status == '12':
                 change = {'$or': [{'change_status': '1'}, {'change_status': '2'}]}
                 data_search['$and'].append(change)
+        key_status = 0
+        if change_status == '11' and check_status == '0':
+            key_status = 1
+        elif change_status == '0' and check_status == '0':
+            key_status = 1
+        elif not change_status and not check_status:
+            key_status = 1
+        if book_name or author_list or tags or publish_info or category:
+            key_status = 0
         start = int(request.args.get('start', '0'))
         end = int(request.args.get('end', '30'))
         length = end - start
         # count_book = 8000000
-        count_book = db.t_books.count(data_search)
+        # print(data_search)
+        # print(change_status, check_status)
+        if start > 10000 or key_status == 0:
+            count_book = db.t_books.count(data_search)
+        elif start == 0:
+            count_book = start + 150
+        else:
+            count_book = start + 45
         books = db.t_books.find(data_search).limit(length).skip(start).sort([('score', -1)])
         data_list = []
         for data in books:
@@ -191,6 +207,14 @@ def book_update():
             operation = {session['id']: [session['username'], 'update', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
             db.t_books.update({'_id': ObjectId(book_id)}, {'$set': data_update})
             db.t_books.update({'_id': ObjectId(book_id)}, {'$push': {'operation': operation}})
+            db.mg_action_record.insert_one({
+                'userid': session['id'],
+                'username': session['username'],
+                'action': 'change',
+                'type': '1',
+                'aid': book_id,
+                'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
         returnObj['info'] = '修改成功'
         return jsonify(returnObj)
     except Exception as e:
@@ -259,7 +283,15 @@ def book_insert():
         dataObj['change_status'] = '1'
         dataObj['shelf_status'] = '0'
         dataObj['check_status'] = '0'
-        db.t_books.insert(dataObj)
+        result = db.t_books.insert_one(dataObj)
+        db.mg_action_record.insert_one({
+            'userid': session['id'],
+            'username': session['username'],
+            'action': 'insert',
+            'type': '1',
+            'aid': str(result.inserted_id),
+            'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
         returnObj['info'] = '录入成功'
         return jsonify(returnObj)
     except Exception as e:
@@ -355,6 +387,16 @@ def book_operation():
         returnObj['info'] = '操作成功'
         if key_status == 1:
             return raise_status(400, info)
+        action_list = []
+        for book_id in list:
+            action_list.append({
+                'userid': session['id'],
+                'username': session['username'],
+                'action': action,
+                'type': '1',
+                'aid': book_id,
+                'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
         return jsonify(returnObj)
     except Exception as e:
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- book_operation error as: ', e)
@@ -368,8 +410,18 @@ def book_delete():
     returnObj = {}
     try:
         book_list = request.json.get('book_list')
+        action_list = []
         for book_id in book_list:
             db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'change_status': '2'}})
+            action_list.append({
+                'userid': session['id'],
+                'username': session['username'],
+                'action': 'delete',
+                'type': '1',
+                'aid': book_id,
+                'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+        db.mg_action_record.insert_many(action_list)
         returnObj['info'] = '操作成功'
         return jsonify(returnObj)
     except Exception as e:
@@ -380,7 +432,6 @@ def book_delete():
 @book.route('/book/image/<book_id>', methods=['POST'])
 @sign_check()
 def book_image(book_id):
-    from app import db
     returnObj = {}
     try:
         type = request.args.get('type')

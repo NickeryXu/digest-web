@@ -67,11 +67,26 @@ def excerpt_search():
             elif recommend_status == '0':
                 recommend = {'$or': [{'recommend_status': '0'}, {'recommend_status': {'$exists': 0}}]}
                 data_search['$and'].append(recommend)
+        key_status = 0
+        if change_status == '11' and check_status == '0':
+            key_status = 1
+        elif change_status == '0' and check_status == '0':
+            key_status = 1
+        elif not change_status and not check_status:
+            key_status = 1
+        if book_name or exp_text or is_hot_exp:
+            key_status = 0
         start = int(request.args.get('start', '0'))
         end = int(request.args.get('end', '30'))
         length = end - start
-        count_excerpt = db.t_excerpts.find(data_search).count()
-        data = db.t_excerpts.find(data_search).limit(length).skip(start).sort([('book_name', 1), ('exp_text', 1)])
+        # print(change_status, check_status)
+        if start > 10000 or key_status == 0:
+            count_excerpt = db.t_excerpts.find(data_search).count()
+        elif start == 0:
+            count_excerpt = start + 150
+        else:
+            count_excerpt = start + 45
+        data = db.t_excerpts.find(data_search).limit(length).skip(start).sort([('book_name', 1)])
         dataObj = []
         # 查询出的文档可能没有ck字段，即没有修改内容，所以采用get方法，修改内容取原始内容
         for digest in data:
@@ -125,6 +140,14 @@ def excerpt_update():
             }})
             operation = {session['id']: [session['username'], 'update', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
             db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$push': {'operation': operation}})
+            db.mg_action_record.insert({
+                'userid': session['id'],
+                'username': session['username'],
+                'action': 'change',
+                'type': '2',
+                'aid': excerpt_id,
+                'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
             summary = db.t_excerpts.find_one({'_id': ObjectId(excerpt_id)})
             book_id = summary['bookid']
             data_count = db.t_books.find_one({'_id': ObjectId(book_id)})
@@ -187,7 +210,18 @@ def excerpt_insert():
                 'recommend_status': '0'
             }
             data_insert.append(excerpt)
-        db.t_excerpts.insert_many(data_insert)
+        results = db.t_excerpts.insert_many(data_insert)
+        action_list = []
+        for excerpt_id in results.inserted_ids:
+            action_list.append({
+                'userid': session['id'],
+                'username': session['username'],
+                'action': 'insert',
+                'type': '2',
+                'aid': str(excerpt_id),
+                'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+        db.mg_action_record.insert_many(action_list)
         returnObj['info'] = '录入成功'
         return jsonify(returnObj)
     except Exception as e:
@@ -298,6 +332,17 @@ def excerpt_operation():
                 db.t_excerpts.update({'_id': ObjectId(excerpt_id)}, {'$set': {'recommend_status': '0'}})
         if key_status == 1:
             return raise_status(400, info)
+        action_list = []
+        for excerpt_id in list:
+            action_list.append({
+                'userid': session['id'],
+                'username': session['username'],
+                'action': action,
+                'type': '2',
+                'aid': excerpt_id,
+                'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+        db.mg_action_record.insert_many(action_list)
         returnObj['info'] = '操作成功'
         return jsonify(returnObj)
     except Exception as e:
@@ -312,8 +357,18 @@ def excerpt_delete():
     returnObj = {}
     try:
         excerpt_list = request.json.get('excerpt_list')
+        action_list = []
         for excerpt in excerpt_list:
             db.t_excerpts.update({'_id': ObjectId(excerpt)}, {'$set': {'change_status': '2'}})
+            action_list.append({
+                'userid': session['id'],
+                'username': session['username'],
+                'action': 'delete',
+                'type': '2',
+                'aid': excerpt,
+                'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+        db.mg_action_record.insert_many(action_list)
         returnObj['info'] = '操作成功'
         return jsonify(returnObj)
     except Exception as e:
