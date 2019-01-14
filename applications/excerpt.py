@@ -195,6 +195,7 @@ def excerpt_insert():
         book_name = data['book_name']
         operation = {session['id']: [session['username'], 'insert', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]}
         data_insert = []
+        exp_count = 0
         for content in exp_text:
             excerpt = {
                 'bookid': bookid,
@@ -210,6 +211,15 @@ def excerpt_insert():
                 'recommend_status': '0'
             }
             data_insert.append(excerpt)
+            exp_count += 1
+        data_book = db.t_books.find_one({'_id': ObjectId(bookid)})
+        if data_book.get('digest_ck'):
+            digest_ck = [data_book['digest_ck'][0], data_book['digest_ck'][1] + exp_count]
+        else:
+            digest_count = db.t_excerpts.count({'bookid': bookid})
+            ck_count = db.t_excerpts.count({'bookid': bookid, 'change_status': '1'})
+            digest_ck = [digest_count - ck_count, digest_count]
+        db.t_books.update_one({'_id': ObjectId(bookid)}, {'$set': {'digest_ck': digest_ck}})
         results = db.t_excerpts.insert_many(data_insert)
         action_list = []
         for excerpt_id in results.inserted_ids:
