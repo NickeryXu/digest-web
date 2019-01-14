@@ -58,7 +58,8 @@ def book_search():
         if summary:
             data_search['summary'] = {'$regex': summary}
         if category:
-            # category_list = category.split(',')
+            if type(category) == str:
+                category = category.split(',')
             data_search['category.name'] = {'$all': category}
         if catalog_info:
             data_search['catalog_info'] = {'$all': catalog_info}
