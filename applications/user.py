@@ -23,16 +23,33 @@ def signup():
             info = '用户名重复'
             return raise_status(400, info)
         else:
+            list = {
+                '101': {'id': '101', 'name': '书摘录入', 'path': '/excerpt/add'},
+                '102': {'id': '102', 'name': '书摘校验', 'path': '/excerpt/search'},
+                '103': {'id': '103', 'name': '书摘审核', 'path': '/excerpt/check'},
+                '104': {'id': '104', 'name': '书摘上架', 'path': '/excerpt/manage'},
+                '105': {'id': '105', 'name': '书摘查询', 'path': '/excerpt/query'},
+                '201': {'id': '201', 'name': '书籍录入', 'path': '/book/add'},
+                '202': {'id': '202', 'name': '书籍校验', 'path': '/book/search'},
+                '203': {'id': '203', 'name': '书籍审核', 'path': '/book/check'},
+                '204': {'id': '204', 'name': '书籍上架', 'path': '/book/manage'},
+                '205': {'id': '205', 'name': '书籍查询', 'path': '/book/query'},
+                '301': {'id': '301', 'name': '添加用户', 'path': '/user/manage'},
+                '302': {'id': '302', 'name': '个人设置', 'path': '/user/profile'}
+            }
             if not username or not password or not role_list:
                 info = '有未填信息'
                 return raise_status(400, info)
+            ROLE = []
+            for role in role_list:
+                ROLE.append(list[role])
             data = {
                 'username': username,
                 'password': password,
                 'mobile': mobile,
                 'email': email,
                 'remark': remark,
-                'role_list': role_list
+                'role_list': ROLE
             }
             db.mg_user.insert(data)
             returnObj['info'] = '创建成功'
@@ -151,11 +168,11 @@ def user_profile():
             db.mg_user.update_one({'_id': ObjectId(user_id)}, {'$set': {'count_change': [day_start, count_all]}})
         else:
             count_all = data['count_change'][1]
-        count_day = db.mg_action_record.count({'action': 'change', 'type': '2', 'userid': user_id,
+        count_day = db.mg_action_record.count({'$or': [{'action': 'change'}, {'action': 'delete'}], 'type': '2', 'userid': user_id,
                                                'date': {'$gt': day_start}})
-        count_week = db.mg_action_record.count({'action': 'change', 'type': '2', 'userid': user_id,
+        count_week = db.mg_action_record.count({'$or': [{'action': 'change'}, {'action': 'delete'}], 'type': '2', 'userid': user_id,
                                                 'date': {'$gt': week_start}})
-        count_month = db.mg_action_record.count({'action': 'change', 'type': '2', 'userid': user_id,
+        count_month = db.mg_action_record.count({'$or': [{'action': 'change'}, {'action': 'delete'}], 'type': '2', 'userid': user_id,
                                                  'date': {'$gt': month_start}})
         returnObj = {
             'data': {
@@ -183,15 +200,18 @@ def change():
     from app import db
     returnObj = {}
     try:
+        uid = request.json.get('uid', '000000000000000000000000')
         username = request.json.get('username')
         mobile = request.json.get('mobile')
         email = request.json.get('email')
         remark = request.json.get('remark')
         password = request.json.get('password')
+        role_list = request.json.get('role_list')
         data = {}
         # 不一定每个字段都要修改，没有的就忽略掉
         if username:
-            if db.mg_user.find_one({'username': username}):
+            check = db.mg_user.find_one({'username': username})
+            if check and check.get('_id') != ObjectId(uid):
                 info = '用户名重复'
                 return raise_status(400, info)
             data['username'] = username
@@ -203,7 +223,29 @@ def change():
             data['remark'] = remark
         if password:
             data['password'] = password
-        db.mg_user.update({'_id': ObjectId(session['id'])}, {'$set': data})
+        list = {
+            '101': {'id': '101', 'name': '书摘录入', 'path': '/excerpt/add'},
+            '102': {'id': '102', 'name': '书摘校验', 'path': '/excerpt/search'},
+            '103': {'id': '103', 'name': '书摘审核', 'path': '/excerpt/check'},
+            '104': {'id': '104', 'name': '书摘上架', 'path': '/excerpt/manage'},
+            '105': {'id': '105', 'name': '书摘查询', 'path': '/excerpt/query'},
+            '201': {'id': '201', 'name': '书籍录入', 'path': '/book/add'},
+            '202': {'id': '202', 'name': '书籍校验', 'path': '/book/search'},
+            '203': {'id': '203', 'name': '书籍审核', 'path': '/book/check'},
+            '204': {'id': '204', 'name': '书籍上架', 'path': '/book/manage'},
+            '205': {'id': '205', 'name': '书籍查询', 'path': '/book/query'},
+            '301': {'id': '301', 'name': '添加用户', 'path': '/user/manage'},
+            '302': {'id': '302', 'name': '个人设置', 'path': '/user/profile'}
+        }
+        if role_list:
+            role = []
+            for single in role_list:
+                role.append(list[single])
+            data['role_list'] = role
+        if uid == '000000000000000000000000':
+            db.mg_user.update_one({'_id': ObjectId(session['id'])}, {'$set': data})
+        else:
+            db.mg_user.update_one({'_id': ObjectId(uid)}, {'$set': data})
         session['username'] = username
         returnObj['data'] = {'username': username}
         returnObj['info'] = '修改成功'
