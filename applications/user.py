@@ -116,6 +116,7 @@ def login():
 @sign_check()
 def user_profile():
     from app import db
+    from datetime import timedelta, date
     try:
         user_id = session['id']
         data = db.mg_user.find_one({'_id': ObjectId(user_id)})
@@ -141,13 +142,32 @@ def user_profile():
         email = data.get('email')
         mobile = data.get('mobile')
         remark = data.get('remark')
+        now = date.today()
+        day_start = str(now) + ' 00:00:00'
+        week_start = str(now - timedelta(days=now.weekday())) + ' 00:00:00'
+        month_start = str(datetime(now.year, now.month, 1))
+        if not data.get('count_change') or data.get('count_change')[0] < day_start:
+            count_all = db.t_excerpts.count({'$or': [{'change_status': '0'}, {'change_status': {'$exists': 0}}]})
+            db.mg_user.update_one({'_id': ObjectId(user_id)}, {'$set': {'count_change': [day_start, count_all]}})
+        else:
+            count_all = data['count_change'][1]
+        count_day = db.mg_action_record.count({'action': 'change', 'type': '2', 'userid': user_id,
+                                               'date': {'$gt': day_start}})
+        count_week = db.mg_action_record.count({'action': 'change', 'type': '2', 'userid': user_id,
+                                                'date': {'$gt': week_start}})
+        count_month = db.mg_action_record.count({'action': 'change', 'type': '2', 'userid': user_id,
+                                                 'date': {'$gt': month_start}})
         returnObj = {
             'data': {
                 'username': username,
                 'email': email,
                 'mobile': mobile,
                 'role_list': role,
-                'remark': remark
+                'remark': remark,
+                'count': count_all,
+                'day': count_day,
+                'week': count_week,
+                'month': count_month
             },
             'info': '查询成功'
         }
