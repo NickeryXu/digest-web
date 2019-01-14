@@ -218,7 +218,7 @@ def excerpt_insert():
         else:
             digest_count = db.t_excerpts.count({'bookid': bookid})
             ck_count = db.t_excerpts.count({'bookid': bookid, 'change_status': '1'})
-            digest_ck = [digest_count - ck_count, digest_count]
+            digest_ck = [digest_count - ck_count, digest_count + exp_count]
         db.t_books.update_one({'_id': ObjectId(bookid)}, {'$set': {'digest_ck': digest_ck}})
         results = db.t_excerpts.insert_many(data_insert)
         action_list = []
