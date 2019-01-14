@@ -86,7 +86,7 @@ def excerpt_search():
             count_excerpt = start + 150
         else:
             count_excerpt = start + 45
-        data = db.t_excerpts.find(data_search).limit(length).skip(start).sort([('book_name', 1)])
+        data = db.t_excerpts.find(data_search).limit(length).skip(start).sort([('book_name', 1), ('exp_text', 1)])
         dataObj = []
         # 查询出的文档可能没有ck字段，即没有修改内容，所以采用get方法，修改内容取原始内容
         for digest in data:
