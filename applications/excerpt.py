@@ -156,7 +156,7 @@ def excerpt_update():
                 digest_ck[0] = digest_ck[0] - 1
             else:
                 digest_count = db.t_excerpts.count({'bookid': book_id})
-                ck_count = db.t_excerpts.count({'bookid': book_id, 'change_status': '1'})
+                ck_count = db.t_excerpts.count({'bookid': book_id, '$or': [{'change_status': '1'}, {'change_status': '2'}]})
                 digest_ck = [digest_count - ck_count, digest_count]
             db.t_books.update({'_id': ObjectId(book_id)}, {'$set': {'digest_ck': digest_ck}})
             # data['ck_exp_chp_id'] = ck_exp_chp_id
@@ -217,7 +217,7 @@ def excerpt_insert():
             digest_ck = [data_book['digest_ck'][0], data_book['digest_ck'][1] + exp_count]
         else:
             digest_count = db.t_excerpts.count({'bookid': bookid})
-            ck_count = db.t_excerpts.count({'bookid': bookid, 'change_status': '1'})
+            ck_count = db.t_excerpts.count({'bookid': bookid, '$or': [{'change_status': '1'}, {'change_status': '2'}]})
             digest_ck = [digest_count - ck_count, digest_count + exp_count]
         db.t_books.update_one({'_id': ObjectId(bookid)}, {'$set': {'digest_ck': digest_ck}})
         results = db.t_excerpts.insert_many(data_insert)
@@ -303,7 +303,7 @@ def excerpt_operation():
                 if data.get('change_status') == '2':
                     data_book = db.t_books.find_one({'_id': ObjectId(data['bookid'])})
                     if data_book.get('digest_ck'):
-                        digest_ck = [data_book['digest_ck'][0] - 1, data_book['digest_ck'][1] - 1]
+                        digest_ck = [data_book['digest_ck'][0], data_book['digest_ck'][1] - 1]
                         db.t_books.update_one({'_id': ObjectId(data['bookid'])}, {'$set': {'digest_ck': digest_ck}})
                     db.t_excerpts.remove({'_id': ObjectId(excerpt_id)})
                 if data.get('ck_exp_text'):
@@ -368,8 +368,9 @@ def excerpt_delete():
     try:
         excerpt_list = request.json.get('excerpt_list')
         action_list = []
+        count = 0
         for excerpt in excerpt_list:
-            db.t_excerpts.update({'_id': ObjectId(excerpt)}, {'$set': {'change_status': '2'}})
+            data_excerpt = db.t_excerpts.find_one_and_update({'_id': ObjectId(excerpt)}, {'$set': {'change_status': '2'}})
             action_list.append({
                 'userid': session['id'],
                 'username': session['username'],
@@ -378,6 +379,16 @@ def excerpt_delete():
                 'aid': excerpt,
                 'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             })
+            count += 1
+        data_book = db.t_books.find_one({'_id': ObjectId(data_excerpt['bookid'])})
+        if data_book.get('digest_ck'):
+            digest_ck = [data_book['digest_ck'][0] - count, data_book['digest_ck'][1]]
+        else:
+            digest_count = db.t_excerpts.count({'bookid': data_excerpt['bookid']})
+            ck_count = db.t_excerpts.count({'bookid': data_excerpt['bookid'],
+                                            '$or': [{'change_status': '1'}, {'change_status': '2'}]})
+            digest_ck = [digest_count - ck_count, digest_count]
+        db.t_books.update_one({'_id': ObjectId(data_excerpt['bookid'])}, {'$set': {'digest_ck': digest_ck}})
         db.mg_action_record.insert_many(action_list)
         returnObj['info'] = '操作成功'
         return jsonify(returnObj)

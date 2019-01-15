@@ -103,7 +103,7 @@ def book_search():
             key_status = 1
         elif not change_status and not check_status:
             key_status = 1
-        if book_name or author_list or tags or publish_info or category:
+        if book_name or author_list or tags or publish_info or category or digest_status:
             key_status = 0
         start = int(request.args.get('start', '0'))
         end = int(request.args.get('end', '30'))
