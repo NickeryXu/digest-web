@@ -177,10 +177,18 @@ def book_update():
             book_id = data_book.get('book_id')
             ck_book_name = data_book.get('ck_book_name')
             author_list = data_book.get('ck_author_list')
+            if type(author_list) == str:
+                author_list = author_list.replace(' ', '')
+                author_list = author_list.replace('，', ',')
+                author_list = author_list.split(',')
             ck_author_list = []
             for author in author_list:
                 ck_author_list.append({'id': 1000000, 'author_name': author})
             category_list = data_book.get('ck_category')
+            if type(category_list) == str:
+                category_list = category_list.replace(' ', '')
+                category_list = category_list.replace('，', ',')
+                category_list = category_list.split(',')
             ck_category_list = []
             for category in category_list:
                 ck_category_list.append({'id': 100, 'name': category})
@@ -275,6 +283,8 @@ def book_insert():
             cover_thumbnail = "http://wfqqreader-1252317822.image.myqcloud.com/cover/873/21031873/s_21031873.jpg"
         dataObj['cover_thumbnail'] = cover_thumbnail
         dataObj['publish_info'] = publish_info
+        if type(catalog_info) == str:
+            catalog_info = catalog_info.split(',')
         dataObj['catalog_info'] = catalog_info
         if not series:
             series = []
