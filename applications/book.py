@@ -283,8 +283,8 @@ def book_insert():
             cover_thumbnail = "http://wfqqreader-1252317822.image.myqcloud.com/cover/873/21031873/s_21031873.jpg"
         dataObj['cover_thumbnail'] = cover_thumbnail
         dataObj['publish_info'] = publish_info
-        if type(catalog_info) == str:
-            catalog_info = catalog_info.split(',')
+        if ',' in catalog_info[0]:
+            catalog_info = catalog_info[0].split(',')
         dataObj['catalog_info'] = catalog_info
         if not series:
             series = []
