@@ -357,6 +357,12 @@ def excerpt_operation():
         return jsonify(returnObj)
     except Exception as e:
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '- excerpt_operation error as: ', e)
+        if action == 'pass':
+            try:
+                for excerpt_id in list:
+                    db.t_excerpts.update_one({'_id': ObjectId(excerpt_id)}, {'$set': {'shelf_status': '0'}})
+            except Exception as err:
+                print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "- excerpt_operation's except error as: ", err)
         return raise_status(500, str(e))
 
 # 删除书摘
