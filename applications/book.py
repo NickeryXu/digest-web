@@ -50,7 +50,10 @@ def book_search():
         if book_name:
             data_search['book_name'] = {'$regex': book_name}
         if author_list:
-            data_search['author_list.author_name'] = {'$all': author_list}
+            if not change_status or change_status == '11':
+                data_search['author_list.author_name'] = {'$all': author_list}
+            else:
+                data_search['author_list.author_name'] = {'$all': author_list.split(',')}
         if tags:
             data_search['tags'] = {'$all': tags}
         if score:
@@ -371,6 +374,7 @@ def book_operation():
                     db.t_books.remove({'_id': ObjectId(book_id)})
                 if data.get('ck_book_name'):
                     data['book_name'] = data['ck_book_name']
+                    db.t_excerpts.update_many({'bookid': book_id}, {'$set': {'book_name': data['ck_book_name']}})
                 if data.get('ck_author_list'):
                     data['author_list'] = data['ck_author_list']
                 if data.get('ck_category'):
