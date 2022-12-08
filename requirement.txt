@@ -1,6 +1,6 @@
 aliyun-python-sdk-core-v3==2.11.2
 aliyun-python-sdk-kms==2.5.0
-certifi==2018.10.15
+certifi==2022.12.7
 chardet==3.0.4
 Click==7.0
 crcmod==1.7
